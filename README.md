@@ -1,51 +1,51 @@
-# Emergency RS Agent Platform
+# Emergency RS Agent Platform（应急遥感智能体平台）
 
-A production-style emergency management dashboard for remote sensing disaster assessment.  
-The UI is designed for demos with emergency management departments and showcases how an uncertainty-aware RS agent system can be exposed as a commercial command platform.
+面向遥感灾害评估的生产级应急管理指挥面板。  
+UI 专为向应急管理部门演示而设计，展示一个具备不确定性感知能力的遥感智能体系统如何以商业化指挥平台形态呈现。
 
-## Features
+## 功能特性
 
-- Command-center style dashboard for disaster monitoring
-- Region-level assessment table with confidence-aware outputs
-- Evidence-chain workflow for image, mask, and text alignment
-- AI-agent report center for structured disaster briefing
-- Static deployment-ready build for GitHub Pages, Vercel, or Netlify
+- 指挥中心风格的灾害监测仪表盘
+- 带置信度标注的区域级研判结果表
+- 图像-掩码-文本对齐的证据链工作流
+- AI 智能体报告中心，输出结构化灾情简报
+- 静态构建产物，支持 GitHub Pages、Vercel 或 Netlify 部署
 
-## Tech Stack
+## 技术栈
 
 - React 19
 - Vite 8
 - Recharts
 - Lucide React
 
-## Local Development
+## 本地开发
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Production Build
+## 生产构建
 
 ```bash
 npm run build
 npm run preview
 ```
 
-## GitHub Pages
+## GitHub Pages 部署
 
-This repo includes `.github/workflows/deploy.yml` for GitHub Pages deployment.
+本仓库包含 `.github/workflows/deploy.yml`，用于 GitHub Pages 自动部署。
 
-1. Push the repository to GitHub on the `main` branch.
-2. In GitHub repository settings, enable Pages with `GitHub Actions` as the source.
-3. Every push to `main` will build and publish the site automatically.
+1. 将仓库推送至 GitHub 的 `main` 分支。
+2. 在 GitHub 仓库设置中，启用 Pages，选择 `GitHub Actions` 作为部署来源。
+3. 每次推送至 `main` 分支，站点将自动构建并发布。
 
-## Manual `gh-pages` Deployment
+## 手动部署至 `gh-pages`
 
 ```bash
 npm run deploy
 ```
 
-## Suggested Repository Name
+## 建议仓库名
 
 `emergency-rs-agent-platform`
