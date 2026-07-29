@@ -2,6 +2,7 @@ import { ArrowLeft, ArrowRight, CheckCircle2, ImagePlus, UploadCloud } from 'luc
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import PageHeader from '../components/common/PageHeader.jsx'
+import { createBackendJob, isRealApiEnabled } from '../services/backendJobService.js'
 import { createTask } from '../services/taskService.js'
 
 const disasterTypes = {
@@ -20,9 +21,9 @@ function UploadField({ label, file, onChange }) {
     <label className={`upload-box ${file ? 'has-file' : ''}`}>
       {file ? <CheckCircle2 size={30} /> : <UploadCloud size={30} />}
       <strong>{file ? file.name : label}</strong>
-      <span>{file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : '支持 TIFF、GeoTIFF、PNG 或 JPG'}</span>
+      <span>{file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : '当前后端支持 PNG、JPG 或 JPEG'}</span>
       <input
-        accept=".tif,.tiff,.png,.jpg,.jpeg,image/*"
+        accept=".png,.jpg,.jpeg,image/png,image/jpeg"
         onChange={(event) => onChange(event.target.files?.[0] ?? null)}
         type="file"
       />
@@ -33,6 +34,7 @@ function UploadField({ label, file, onChange }) {
 function NewTaskPage() {
   const navigate = useNavigate()
   const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
   const [form, setForm] = useState({
     name: '',
     disasterType: 'earthquake',
@@ -48,15 +50,27 @@ function NewTaskPage() {
     event.preventDefault()
     if (!canSubmit) return
     setSubmitting(true)
-    const task = await createTask({
-      name: form.name,
-      disasterType: form.disasterType,
-      disasterLabel: disasterTypes[form.disasterType],
-      location: form.location,
-      preImageName: form.preImage.name,
-      postImageName: form.postImage.name,
-    })
-    navigate(`/tasks/${task.id}`)
+    setSubmitError('')
+    try {
+      if (isRealApiEnabled) {
+        const job = await createBackendJob(form.preImage, form.postImage)
+        navigate(`/live-jobs/${job.job_id}`)
+        return
+      }
+
+      const task = await createTask({
+        name: form.name,
+        disasterType: form.disasterType,
+        disasterLabel: disasterTypes[form.disasterType],
+        location: form.location,
+        preImageName: form.preImage.name,
+        postImageName: form.postImage.name,
+      })
+      navigate(`/tasks/${task.id}`)
+    } catch (reason) {
+      setSubmitError(reason.message)
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -68,7 +82,9 @@ function NewTaskPage() {
             返回任务中心
           </Link>
         }
-        description="录入任务信息和双时相遥感影像，提交后将依次模拟五个 Agent 的协同流程。"
+        description={isRealApiEnabled
+          ? '上传双时相影像后，将提交到模型电脑并依次运行 Agent1 和 Agent2。'
+          : '当前使用本地 Mock；配置后端环境变量后可切换到真实 Agent1 + Agent2。'}
         eyebrow="Create assessment"
         title="新建损毁研判任务"
       />
@@ -126,14 +142,14 @@ function NewTaskPage() {
           <span className="eyebrow">Agent pipeline</span>
           <h2>提交后将模拟执行</h2>
           <ol>
-            <li>建筑与五级损伤分割</li>
-            <li>损伤面积和风险量化</li>
-            <li>多模态灾情描述生成</li>
-            <li>Claim 与证据可信校验</li>
-            <li>Markdown / JSON 报告生成</li>
+            <li>Agent1 建筑、道路与损伤视觉证据</li>
+            <li>Agent1 核心指标和复核标志</li>
+            <li>Agent2 英文变化描述</li>
+            <li>后续预留 Agent3 校验和 Agent4 报告</li>
           </ol>
+          {submitError ? <p className="form-error">{submitError}</p> : null}
           <button className="button button-primary button-full" disabled={!canSubmit || submitting} type="submit">
-            {submitting ? '正在创建任务…' : '提交研判任务'}
+            {submitting ? '正在创建任务…' : isRealApiEnabled ? '开始真实分析' : '提交模拟任务'}
             <ArrowRight size={17} />
           </button>
         </aside>

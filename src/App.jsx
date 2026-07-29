@@ -1,6 +1,7 @@
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import AppShell from './components/layout/AppShell.jsx'
 import EvidencePage from './pages/EvidencePage.jsx'
+import LiveJobPage from './pages/LiveJobPage.jsx'
 import NewTaskPage from './pages/NewTaskPage.jsx'
 import OverviewPage from './pages/OverviewPage.jsx'
 import ReportsPage from './pages/ReportsPage.jsx'
@@ -17,6 +18,7 @@ function App() {
           <Route path="/overview" element={<OverviewPage />} />
           <Route path="/tasks" element={<TasksPage />} />
           <Route path="/tasks/new" element={<NewTaskPage />} />
+          <Route path="/live-jobs/:jobId" element={<LiveJobPage />} />
           <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
           <Route path="/tasks/:taskId/evidence" element={<EvidencePage />} />
           <Route path="/tasks/:taskId/report" element={<ReportsPage />} />

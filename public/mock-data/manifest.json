@@ -1,0 +1,14 @@
+{
+  "contract_version": "draft-0.1",
+  "default_pipeline_version": "competition-four-agent-v1",
+  "samples": [
+    {
+      "sample_id": "EARTHQUAKE-TURKEY_003679",
+      "name": "土耳其地震遥感损毁评估",
+      "disaster_type": "earthquake",
+      "pipeline_version": "competition-four-agent-v1",
+      "result_url": "mock-data/competition-four-agent-v1/EARTHQUAKE-TURKEY_003679/job-result.json",
+      "provenance": "Agent1/Agent2 fixed-20 handoff outputs"
+    }
+  ]
+}

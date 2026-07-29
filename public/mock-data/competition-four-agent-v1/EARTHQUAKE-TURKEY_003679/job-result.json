@@ -1,0 +1,197 @@
+{
+  "contract_version": "draft-0.1",
+  "pipeline_version": "competition-four-agent-v1",
+  "job": {
+    "job_id": "job_mock_earthquake_turkey_003679",
+    "sample_id": "EARTHQUAKE-TURKEY_003679",
+    "name": "土耳其地震遥感损毁评估",
+    "disaster_type": "earthquake",
+    "status": "partial_success",
+    "progress": 50,
+    "created_at": "2026-07-10T16:04:02+08:00",
+    "updated_at": "2026-07-10T16:04:20+08:00",
+    "agent_runs": [
+      {
+        "agent_run_id": "run_mock_agent1",
+        "agent_code": "agent1",
+        "capability": "visual_evidence",
+        "display_name": "时空视觉证据感知智能体",
+        "source_schema_version": "2.1",
+        "status": "succeeded",
+        "progress": 100,
+        "error": null
+      },
+      {
+        "agent_run_id": "run_mock_agent2",
+        "agent_code": "agent2",
+        "capability": "change_description",
+        "display_name": "灾前灾后遥感变化描述生成智能体",
+        "source_schema_version": "1.0",
+        "status": "succeeded",
+        "progress": 100,
+        "error": null
+      },
+      {
+        "agent_run_id": "run_mock_agent3",
+        "agent_code": "agent3",
+        "capability": "evidence_verification",
+        "display_name": "证据可信校验智能体",
+        "source_schema_version": null,
+        "status": "skipped",
+        "progress": 0,
+        "error": {
+          "code": "RESULT_NOT_AVAILABLE",
+          "message": "当前交接数据尚未包含 Agent3 正式输出",
+          "retryable": false
+        }
+      },
+      {
+        "agent_run_id": "run_mock_agent4",
+        "agent_code": "agent4",
+        "capability": "report_generation",
+        "display_name": "可信灾情报告生成智能体",
+        "source_schema_version": null,
+        "status": "skipped",
+        "progress": 0,
+        "error": {
+          "code": "UPSTREAM_RESULT_UNAVAILABLE",
+          "message": "缺少 Agent3 校验结果，未生成正式报告",
+          "retryable": false
+        }
+      }
+    ]
+  },
+  "visual_evidence": {
+    "source_schema_versions": {
+      "evidence_ledger": "2.1",
+      "report_summary": "1.1",
+      "review_flags": "1.1"
+    },
+    "building_summary": {
+      "total_buildings": 18,
+      "damaged_buildings": 10,
+      "damage_ratio": 0.5555555555555556,
+      "distribution": {
+        "no_damage": 8,
+        "minor_damage": 4,
+        "major_damage": 2,
+        "destroyed": 4
+      },
+      "mean_damage_presence_confidence": 0.5305718448426988,
+      "mean_damage_level_confidence": 0.5283192727300856
+    },
+    "road_summary": {
+      "is_affected": true,
+      "total_road_pixels": 13015,
+      "affected_road_pixels": 9234,
+      "affected_road_ratio": 0.7094890510948905,
+      "affected_presence_confidence": 0.8757181167602539,
+      "wording_level": "suspected_impact",
+      "interpretation_note": "红色道路表示疑似受灾影响或存在通行受阻风险，不等同于已经确认的结构性道路损毁。"
+    },
+    "risk": {
+      "building": "high",
+      "road": "high",
+      "scene": "high"
+    },
+    "manual_review": {
+      "required": true,
+      "uncertain_building_count": 7,
+      "uncertain_building_ratio": 0.3888888888888889,
+      "uncertain_building_ids": [1, 2, 3, 6, 7, 8, 15],
+      "uncertain_road_pixels": 741,
+      "uncertain_road_ratio": 0.05693430656934306,
+      "reasons": [
+        {
+          "type": "building_damage_presence_uncertainty",
+          "message": "共有 7 栋建筑的是否受损判断处于临界置信度区间。",
+          "affected_building_ids": [1, 2, 3, 6, 7, 8, 15]
+        }
+      ],
+      "recommended_wording": "该区域部分自动识别结果存在不确定性，建议结合人工判读及其他数据源进行进一步复核。"
+    },
+    "artifacts": [
+      {
+        "artifact_id": "art_mock_pre_image",
+        "artifact_type": "pre_image",
+        "file_name": "pre_image.png",
+        "mime_type": "image/png",
+        "url": "mock-data/competition-four-agent-v1/EARTHQUAKE-TURKEY_003679/artifacts/pre_image.png",
+        "source_agent_code": "agent1"
+      },
+      {
+        "artifact_id": "art_mock_post_image",
+        "artifact_type": "post_image",
+        "file_name": "post_image.png",
+        "mime_type": "image/png",
+        "url": "mock-data/competition-four-agent-v1/EARTHQUAKE-TURKEY_003679/artifacts/post_image.png",
+        "source_agent_code": "agent1"
+      },
+      {
+        "artifact_id": "art_mock_damage_instance_color",
+        "artifact_type": "damage_instance_color",
+        "file_name": "damage_instance_color.png",
+        "mime_type": "image/png",
+        "url": "mock-data/competition-four-agent-v1/EARTHQUAKE-TURKEY_003679/artifacts/damage_instance_color.png",
+        "source_agent_code": "agent1"
+      },
+      {
+        "artifact_id": "art_mock_road_status_color",
+        "artifact_type": "road_status_color",
+        "file_name": "road_status_color.png",
+        "mime_type": "image/png",
+        "url": "mock-data/competition-four-agent-v1/EARTHQUAKE-TURKEY_003679/artifacts/road_status_color.png",
+        "source_agent_code": "agent1"
+      },
+      {
+        "artifact_id": "art_mock_road_probability",
+        "artifact_type": "road_affected_probability",
+        "file_name": "road_affected_probability.png",
+        "mime_type": "image/png",
+        "url": "mock-data/competition-four-agent-v1/EARTHQUAKE-TURKEY_003679/artifacts/road_affected_probability.png",
+        "source_agent_code": "agent1"
+      },
+      {
+        "artifact_id": "art_mock_fused_color",
+        "artifact_type": "fused_color",
+        "file_name": "fused_color.png",
+        "mime_type": "image/png",
+        "url": "mock-data/competition-four-agent-v1/EARTHQUAKE-TURKEY_003679/artifacts/fused_color.png",
+        "source_agent_code": "agent1"
+      },
+      {
+        "artifact_id": "art_mock_fused_overlay",
+        "artifact_type": "fused_overlay",
+        "file_name": "fused_overlay.png",
+        "mime_type": "image/png",
+        "url": "mock-data/competition-four-agent-v1/EARTHQUAKE-TURKEY_003679/artifacts/fused_overlay.png",
+        "source_agent_code": "agent1"
+      },
+      {
+        "artifact_id": "art_mock_visual_compare",
+        "artifact_type": "visual_compare",
+        "file_name": "visual_compare.png",
+        "mime_type": "image/png",
+        "url": "mock-data/competition-four-agent-v1/EARTHQUAKE-TURKEY_003679/artifacts/visual_compare.png",
+        "source_agent_code": "agent1"
+      }
+    ]
+  },
+  "change_description": {
+    "source_schema_version": "1.0",
+    "language": "en",
+    "description": "In the post-disaster image, significant changes are observed in the upper left region where a substantial portion of the buildings appears to have been damaged or destroyed, with debris scattered across the area. The river, located centrally, shows a rise in water level, possibly indicating flooding. The surrounding agricultural fields appear undisturbed, but the presence of water suggests potential flood impacts. Roads in the vicinity of the river show signs of localized erosion, possibly due to increased water flow. Overall, the observed pattern may indicate possible flooding.",
+    "verification_status": "unverified",
+    "notice": "模型生成的变化描述，尚未经过证据校验。"
+  },
+  "verification": null,
+  "report": null,
+  "extensions": {
+    "provenance": {
+      "agent1_dataset": "agent1_random20_seed20260707",
+      "agent2_dataset": "agent2_same20_seed20260707",
+      "normalized_for_frontend": true,
+      "local_absolute_paths_removed": true
+    }
+  }
+}
