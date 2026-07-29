@@ -24,6 +24,7 @@
 
 ### 前端基础功能
 
+- 将 GitHub Pages 部署迁移到官方 `configure-pages`、`upload-pages-artifact` 和 `deploy-pages` 工作流
 - 引入 React Router，并将单页静态看板重构为多页面前端
 - 新增态势总览、任务中心、新建研判、任务详情、证据校验和报告中心页面
 - 新增前端 Mock 服务；早期五智能体模拟结构保留为待迁移内容，正式联调以当前 Agent1+Agent2 接口为准
