@@ -2,10 +2,9 @@ const STORAGE_KEY = 'emergency-rs-demo-tasks'
 
 export const agentDefinitions = [
   { id: 'agent1', name: '时空视觉证据感知', shortName: '视觉感知' },
-  { id: 'agent2', name: '损伤量化评估', shortName: '量化评估' },
-  { id: 'agent3', name: '灾情描述生成', shortName: '描述生成' },
-  { id: 'agent4', name: '证据可信校验', shortName: '证据校验' },
-  { id: 'agent5', name: '图文报告生成', shortName: '报告生成' },
+  { id: 'agent2', name: '灾情变化描述生成', shortName: '描述生成' },
+  { id: 'agent3', name: '证据可信校验', shortName: '证据校验' },
+  { id: 'agent4', name: '可信灾情报告生成', shortName: '报告生成' },
 ]
 
 const damageLevels = [
@@ -28,7 +27,7 @@ const claims = [
     id: 'claim-2',
     text: '区域内绝大多数建筑已经完全毁坏。',
     verdict: 'exaggerated',
-    evidence: 'Agent2 损伤量化结果',
+    evidence: 'Agent1 损伤量化结果',
     reason: '4级毁坏占比为 8%，不足以支持“绝大多数”的描述。',
   },
   {
@@ -59,7 +58,7 @@ const seedTasks = [
     createdAt: '2026-07-29T09:20:00+08:00',
     preImageName: 'changsha_pre.tif',
     postImageName: 'changsha_post.tif',
-    agents: createAgents(['completed', 'completed', 'completed', 'completed', 'completed']),
+    agents: createAgents(['completed', 'completed', 'completed', 'completed']),
   },
   {
     id: 'TASK-20260729-002',
@@ -72,7 +71,7 @@ const seedTasks = [
     createdAt: '2026-07-29T10:11:00+08:00',
     preImageName: 'liuyang_pre.tif',
     postImageName: 'liuyang_post.tif',
-    agents: createAgents(['completed', 'completed', 'running', 'pending', 'pending']),
+    agents: createAgents(['completed', 'completed', 'running', 'pending']),
   },
   {
     id: 'TASK-20260728-006',
@@ -85,7 +84,7 @@ const seedTasks = [
     createdAt: '2026-07-28T16:35:00+08:00',
     preImageName: 'yueyang_pre.tif',
     postImageName: 'yueyang_post.tif',
-    agents: createAgents(['completed', 'completed', 'completed', 'completed', 'pending']),
+    agents: createAgents(['completed', 'completed', 'completed', 'pending']),
   },
 ]
 
@@ -102,7 +101,24 @@ function readTasks() {
   }
 
   try {
-    return JSON.parse(stored)
+    return JSON.parse(stored).map((task) => {
+      if (task.agents?.length !== 5) return task
+      const legacyAgents = task.agents
+      const currentStatuses = [
+        legacyAgents[0],
+        legacyAgents[2],
+        legacyAgents[3],
+        legacyAgents[4],
+      ]
+      return {
+        ...task,
+        agents: agentDefinitions.map((definition, index) => ({
+          ...definition,
+          status: currentStatuses[index]?.status ?? 'pending',
+          progress: currentStatuses[index]?.progress ?? 0,
+        })),
+      }
+    })
   } catch {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(seedTasks))
     return seedTasks
@@ -147,7 +163,13 @@ export async function getTask(taskId) {
   const task = hydrateProgress(tasks[index])
   tasks[index] = task
   writeTasks(tasks)
-  return delay({ ...task, damageLevels, claims })
+  return delay({
+    ...task,
+    damageLevels,
+    claims,
+    verification: buildVerificationPayload(task),
+    report: buildReportPayload(task),
+  })
 }
 
 export async function createTask(input) {
@@ -159,7 +181,7 @@ export async function createTask(input) {
     riskLevel: 'medium',
     createdAt: new Date().toISOString(),
     simulationStartedAt: Date.now(),
-    agents: createAgents(['running', 'pending', 'pending', 'pending', 'pending']),
+    agents: createAgents(['running', 'pending', 'pending', 'pending']),
   }
   writeTasks([task, ...tasks])
   return delay(task, 520)
@@ -170,7 +192,7 @@ export async function getDashboard() {
   return {
     kpis: [
       { label: '累计研判任务', value: tasks.length + 24, note: '本周新增 8 项', tone: 'blue' },
-      { label: '正在协同研判', value: tasks.filter((task) => task.status === 'running').length, note: '五智能体流水线', tone: 'cyan' },
+      { label: '正在协同研判', value: tasks.filter((task) => task.status === 'running').length, note: '四智能体流水线', tone: 'cyan' },
       { label: '待人工复核', value: tasks.filter((task) => task.status === 'pending_review').length, note: '可信规则已拦截', tone: 'amber' },
       { label: '已生成报告', value: tasks.filter((task) => task.status === 'completed').length + 18, note: '支持 Markdown / JSON', tone: 'green' },
     ],
@@ -186,26 +208,99 @@ export async function getDashboard() {
   }
 }
 
+export function buildVerificationPayload(task) {
+  if (task.agents[2]?.status !== 'completed') return null
+
+  return {
+    task_id: task.id,
+    source_agent_id: 'agent4',
+    source_version: 'Agent4-V4',
+    check_result: {
+      task_id: task.id,
+      overall_status: 'warning',
+      claim_checks: claims.map((claim) => ({
+        claim_id: claim.id,
+        claim_text: claim.text,
+        support_status: claim.verdict,
+        evidence_refs: claim.evidence ? [claim.evidence] : [],
+        reason: claim.reason,
+      })),
+      supported_claims: ['claim-1'],
+      partially_supported_claims: [],
+      unsupported_claims: ['claim-3'],
+      contradicted_claims: [],
+      exaggerated_claims: ['claim-2'],
+      revision_suggestions: [
+        '将“绝大多数建筑已经完全毁坏”改为与损伤等级统计一致的比例描述。',
+        '删除缺少道路检测证据支撑的道路完全中断结论。',
+      ],
+    },
+    verified_evidence_package: {
+      task_id: task.id,
+      overall_status: 'warning',
+      accepted_claims: ['claim-1'],
+      qualified_claims: [],
+      rejected_claims: ['claim-2', 'claim-3'],
+      source_evidence_ids: ['building_mask', 'damage_mask', 'damage_statistics'],
+      limitations: ['当前演示任务未包含可验证道路通行状态的证据。'],
+    },
+  }
+}
+
 export function buildReport(task) {
   return `# ${task.name}
 
-## 任务摘要
+## 1. 报告摘要
 
 - 任务编号：${task.id}
 - 灾害类型：${task.disasterLabel}
 - 研判区域：${task.location}
 - 综合风险：高风险
 
-## 损毁评估
+## 2. 核心灾情指标
 
 建筑区域共检测 15,820 个有效像素，其中 3—4 级严重损伤占 23%。损伤区域主要集中在研究区中部和东南方向。
 
-## 可信校验
+## 3. 分区评估结果
+
+研究区域中部与东南方向存在连续建筑损毁斑块，建议作为人工复核重点区域。
+
+## 4. 证据支撑与一致性校验
 
 系统核验 3 条关键描述：1 条证据支持，1 条存在夸大，1 条缺少证据。未经支持的道路中断结论未写入正式结论。
 
-## 处置建议
+## 5. 证据局限与不可下结论事项
 
-建议优先对中部连续损毁区域开展人工复核，并结合道路与人口数据进行二次研判。
+当前证据无法确认道路完全中断、人员伤亡、经济损失、政府响应和救援状态。
 `
+}
+
+export function buildReportPayload(task) {
+  if (task.agents[3]?.status !== 'completed') return null
+
+  return {
+    task_id: task.id,
+    source_agent_id: 'agent5',
+    source_version: 'Agent5-V2',
+    platform_report_json: {
+      task_id: task.id,
+      report_type: 'remote_sensing_disaster_assessment',
+      report_version: '2.0',
+      overall_status: 'warning',
+      data_basis: {
+        accepted_claims: 1,
+        qualified_claims: 0,
+        rejected_claims: 2,
+      },
+      key_findings: ['研究区域中部与东南方向存在连续建筑损毁斑块。'],
+      qualified_findings: [],
+      excluded_claims: [
+        '区域内绝大多数建筑已经完全毁坏。',
+        '主要道路均已完全中断。',
+      ],
+      limitations: ['当前证据无法确认道路完全中断、人员伤亡、经济损失、政府响应和救援状态。'],
+      final_conclusion: '现有遥感证据支持研究区存在局部建筑损毁，建议对重点区域开展人工复核。',
+    },
+    markdown_report: buildReport(task),
+  }
 }
