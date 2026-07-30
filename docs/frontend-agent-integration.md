@@ -293,37 +293,67 @@ Agent3 尚未成功时，前端必须在 Agent2 文本上显示：
 
 ### Agent3
 
+当前项目 Agent3 对应最新交接包中的历史版本 `Agent4-V4`。前端使用：
+
+```json
+{
+  "agent_code": "agent3",
+  "capability": "evidence_verification",
+  "source_agent_id": "agent4",
+  "source_version": "Agent4-V4"
+}
+```
+
 | 文件 | artifact_type | 前端用途 |
 | --- | --- | --- |
-| `atomic_claims.json` | `atomic_claims` | 原子 Claims 列表 |
-| `verification_result.json` | `verification_result` | 逐条校验表 |
-| `verified_description_en.txt` | `verified_description_en` | 校验后英文描述 |
-| `run_manifest.json` | `agent3_run_manifest` | 校验模型和运行追踪 |
+| `check_result.json` | `verification_result` | Claim 逐条校验、分类列表和修改建议 |
+| `verified_evidence_package.json` | `verified_evidence_package` | Agent4 报告生成的唯一可信事实输入 |
+| `run_manifest.json` | `agent3_run_manifest` | Agent4-V4 源模型和运行追踪 |
 
 每条 Claim 至少包含：
 
 ```json
 {
   "claim_id": "C001",
-  "claim_type": "building_damage_presence",
-  "claim_text": "Several buildings appear damaged.",
-  "spatial_scope": "upper middle, along the central road",
-  "status": "supported",
-  "evidence_refs": ["B0003", "B0005"],
-  "visual_evidence": ["fused_color", "fused_overlay"],
-  "reason": "Multiple damaged building instances are recorded in the stated area.",
-  "suggested_revision": "Several buildings along the central road show possible damage."
+  "claim": "Several buildings appear damaged.",
+  "support_status": "supported",
+  "evidence_ids": ["E001"],
+  "reason": "The referenced evidence supports the core statement.",
+  "suggested_revision": null
 }
 ```
 
 ### Agent4
 
+当前项目 Agent4 对应最新交接包中的历史版本 `Agent5-V2`：
+
+```json
+{
+  "agent_code": "agent4",
+  "capability": "report_generation",
+  "source_agent_id": "agent5",
+  "source_version": "Agent5-V2"
+}
+```
+
 | 文件 | artifact_type | 前端用途 |
 | --- | --- | --- |
-| `final_report.json` | `final_report_json` | 结构化报告展示和下载 |
-| `final_report.md` | `final_report_markdown` | Markdown 报告预览和下载 |
+| `platform_report_json` | `final_report_json` | 结论、限定结论、排除项和局限卡片 |
+| `markdown_report` | `final_report_markdown` | 固定五段式中文报告预览和下载 |
 | `final_report.docx` | `final_report_docx` | 可选 Word 下载 |
-| `run_manifest.json` | `agent4_run_manifest` | 报告模型和运行追踪 |
+| `run_manifest.json` | `agent4_run_manifest` | Agent5-V2 源模型和运行追踪 |
+
+Markdown 固定顺序：
+
+```text
+## 1. 报告摘要
+## 2. 核心灾情指标
+## 3. 分区评估结果
+## 4. 证据支撑与一致性校验
+## 5. 证据局限与不可下结论事项
+```
+
+前端必须把 `excluded_claims` 作为“被排除结论”展示，不能混入核心灾情指标或最终结论。
 
 ---
 

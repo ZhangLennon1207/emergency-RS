@@ -1,5 +1,5 @@
 {
-  "contract_version": "draft-0.1",
+  "contract_version": "draft-0.2",
   "pipeline_version": "competition-four-agent-v1",
   "job": {
     "job_id": "job_mock_earthquake_turkey_003679",

@@ -1,8 +1,12 @@
-import { AlertTriangle, ArrowLeft, Image as ImageIcon, RefreshCw } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, RefreshCw } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import PageHeader from '../components/common/PageHeader.jsx'
 import StatusBadge from '../components/common/StatusBadge.jsx'
+import ArtifactGallery from '../components/results/ArtifactGallery.jsx'
+import EvidenceVerificationPanel from '../components/results/EvidenceVerificationPanel.jsx'
+import GeneratedReportPanel from '../components/results/GeneratedReportPanel.jsx'
+import { normalizeEvidenceVerification, normalizeGeneratedReport } from '../services/agentResultAdapter.js'
 import { getBackendJob, resolveBackendArtifactUrl } from '../services/backendJobService.js'
 
 const terminalStatuses = new Set(['succeeded', 'partial_success', 'failed'])
@@ -17,14 +21,27 @@ const stageLabels = {
   failed: '分析失败',
 }
 
-function ResultImage({ label, src }) {
-  if (!src) return null
-  return (
-    <figure className="backend-result-image">
-      <img alt={label} src={resolveBackendArtifactUrl(src)} />
-      <figcaption>{label}</figcaption>
-    </figure>
-  )
+function getAgentRuns(job) {
+  const declaredRuns = job?.agent_runs ?? job?.result?.agent_runs ?? []
+  if (declaredRuns.length) return declaredRuns
+
+  const result = job?.result
+  if (!result) return []
+
+  return [
+    {
+      agent_code: 'agent1',
+      display_name: '时空视觉证据感知',
+      status: result.agent1?.status ?? (job.status === 'running_agent1' ? 'running' : 'pending'),
+      progress: result.agent1?.status ? 100 : job.status === 'running_agent1' ? job.progress : 0,
+    },
+    {
+      agent_code: 'agent2',
+      display_name: '灾情变化描述生成',
+      status: result.agent2?.status ?? (job.status === 'running_agent2' ? 'running' : 'pending'),
+      progress: result.agent2?.status ? 100 : job.status === 'running_agent2' ? job.progress : 0,
+    },
+  ]
 }
 
 function LiveJobPage() {
@@ -60,7 +77,12 @@ function LiveJobPage() {
   const artifacts = job?.result?.artifacts ?? {}
   const summary = job?.result?.agent1?.summary
   const description = job?.result?.agent2?.description
+  const verificationPayload = job?.result?.verification ?? job?.result?.agent3?.result ?? null
+  const reportPayload = job?.result?.report ?? job?.result?.agent4?.result ?? null
+  const verification = normalizeEvidenceVerification(verificationPayload)
+  const report = normalizeGeneratedReport(reportPayload)
   const errors = useMemo(() => job?.errors ?? [], [job])
+  const agentRuns = useMemo(() => getAgentRuns(job), [job])
 
   if (error) {
     return (
@@ -111,19 +133,40 @@ function LiveJobPage() {
         </section>
       ) : null}
 
+      {agentRuns.length ? (
+        <section className="panel">
+          <div className="panel-heading">
+            <div><span className="eyebrow">Agent runs</span><h2>智能体执行状态</h2></div>
+            {job.status === 'partial_success' ? <StatusBadge value="partial_success" /> : null}
+          </div>
+          <div className="agent-pipeline live-agent-pipeline">
+            {agentRuns.map((run, index) => (
+              <article className={`agent-stage agent-${run.status}`} key={run.agent_run_id ?? run.agent_code}>
+                <div className="agent-stage-head">
+                  <span>{index + 1}</span>
+                  <StatusBadge value={run.status} />
+                </div>
+                <strong>{run.display_name ?? run.agent_code}</strong>
+                <small>{run.agent_code}</small>
+                <div className="progress-track"><i style={{ width: `${run.progress ?? 0}%` }} /></div>
+                <p>{run.error?.message
+                  ?? (run.status === 'failed' ? '该阶段执行失败，请查看错误信息。' : null)
+                  ?? (run.status === 'skipped' ? '因上游结果不可用，本阶段未执行。' : null)
+                  ?? (['succeeded', 'success', 'completed'].includes(run.status) ? '阶段输出已生成。' : null)
+                  ?? (run.status === 'running' ? `正在执行，当前进度 ${run.progress ?? 0}%` : '等待执行。')}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       {job.result ? (
         <>
           <section className="panel">
             <div className="panel-heading">
               <div><span className="eyebrow">Artifacts</span><h2>遥感影像与 Agent1 成果</h2></div>
-              <ImageIcon size={20} />
             </div>
-            <div className="backend-image-grid">
-              <ResultImage label="灾前影像" src={artifacts.input_pre} />
-              <ResultImage label="灾后影像" src={artifacts.input_post} />
-              <ResultImage label="Agent1 融合叠加图" src={artifacts.agent1_fused_overlay} />
-              <ResultImage label="Agent1 六宫格对比图" src={artifacts.agent1_visual_compare} />
-            </div>
+            <ArtifactGallery artifacts={artifacts} resolveUrl={resolveBackendArtifactUrl} />
           </section>
 
           <section className="result-grid">
@@ -156,6 +199,9 @@ function LiveJobPage() {
               </div>
             </article>
           </section>
+
+          <EvidenceVerificationPanel result={verification} />
+          <GeneratedReportPanel result={report} />
         </>
       ) : null}
     </div>

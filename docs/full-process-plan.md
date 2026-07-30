@@ -630,10 +630,10 @@ POST   /api/v1/tasks/{task_id}/retry
 
 ```text
 Agent2 英文描述 + Agent1 客观证据
-→ Agent3 拆分原子 Claims 并逐条校验
-→ Agent3 生成 verified_description_en
-→ Agent4 读取校验结果、场景摘要和 review_flags
-→ Agent4 生成中文 JSON/Markdown 报告
+→ Agent3（源版本 Agent4-V4）根据 evidence_list 和 claim_list 逐条校验
+→ Agent3 生成 check_result 和 verified_evidence_package
+→ Agent4（源版本 Agent5-V2）仅读取 verified_evidence_package
+→ Agent4 生成 platform_report_json 和固定五段式中文 Markdown 报告
 ```
 
 ### 关键规则
@@ -642,17 +642,21 @@ Agent2 英文描述 + Agent1 客观证据
 - `unsupported` 和 `contradicted` 内容不能进入正式结论。
 - `exaggerated` 内容必须降级或删除。
 - Agent3 不读取 `review_flags.json`，也不输出 `needs_human_review`。
-- Agent4 读取 `review_flags.json`，当 `review_required=true` 时必须加入人工复核提示。
+- Agent4 的模型事实输入只能是 `verified_evidence_package`；业务后端可在报告展示层附加 Agent1 `review_flags.json` 的人工复核提示。
 - 道路结果只能表述为“疑似受影响”或“可能存在通行受阻风险”。
 - 模型置信度不得表述为真实正确概率，必须注明尚未校准。
 - 报告必须记录 Agent 和模型版本。
+- 报告固定为“报告摘要、核心灾情指标、分区评估结果、证据支撑与一致性校验、证据局限与不可下结论事项”五段。
+- `rejected_claims` 只能作为一致性校验记录，不能进入正式灾情结论。
 - 人工修改必须记录修改时间和原因。
 
 ### 验收条件
 
 - Agent3 能将每条英文描述拆为单一事实 Claims，不漏句、不新增事实。
-- 每条 Claim 都有 `status`、`reason`、`evidence_refs` 和 `suggested_revision`。
+- 每条 Claim 都有 `support_status`、`reason`、`evidence_ids` 和 `suggested_revision`。
 - Agent4 不会引用已拦截的 Claim。
+- Agent3 的 `verified_evidence_package` 正确区分 `accepted_claims`、`qualified_claims` 和 `rejected_claims`。
+- Agent4 同时返回 `platform_report_json` 和 `markdown_report`，且 Markdown 五个标题完整、顺序固定。
 - 精确数量和比例只来自 Agent1 场景摘要，不来自 Agent2 自然语言。
 - 固定20条样本通过 `sample_id` 正确配对。
 - 前端可以预览并下载 Markdown 和 JSON。
@@ -856,7 +860,7 @@ Agent Worker
 2. `evidence_ledger_core.json` 和 `agent1_report_summary.json` 的完整真实字段。
 3. `review_flags.json` 的完整真实字段和复核触发规则。
 4. `agent2_output.json` 的完整真实字段。
-5. Agent3/4 是直接复用交接指南建议格式，还是已经有新的实现格式。
+5. Agent3/4 后端是否继续保留历史 `/agent4/check`、`/agent5/report` 路由，或由统一 Job API 完全封装。
 6. 固定20条样本中选择哪一条作为网页标准演示样本。
 7. 第一版允许上传的文件类型、最大体积和尺寸。
 8. Agent 最终以 Python 函数、命令行还是 HTTP 服务接入。

@@ -1,8 +1,8 @@
 # Emergency RS API 契约草案
 
-> 状态：Draft 0.1  
+> 状态：Draft 0.2
 > 临时基线：`competition-four-agent-v1`  
-> 更新时间：2026-07-29
+> 更新时间：2026-07-30
 
 ## 1. 使用原则
 
@@ -21,14 +21,24 @@
 当前版本关系：
 
 ```text
-API contract: draft-0.1
+API contract: draft-0.2
 pipeline: competition-four-agent-v1
 Agent1 evidence_ledger_core: 2.1
 Agent1 agent1_report_summary: 1.1
 Agent1 review_flags: 1.1
 Agent2 agent2_output: 1.0
-Agent3/Agent4: 等待正式实现
+Agent3 evidence_verification: source Agent4-V4
+Agent4 report_generation: source Agent5-V2
 ```
+
+当前项目采用能力编号，最新交接包仍保留历史模型编号：
+
+| 当前流水线 | capability | 交接包源版本 |
+| --- | --- | --- |
+| Agent3 | `evidence_verification` | Agent4-V4 |
+| Agent4 | `report_generation` | Agent5-V2 |
+
+后端和数据库必须同时保存 `agent_code`、`capability` 与 `source_version`。前端按 `capability` 决定展示区域，不根据源版本中的 Agent 数字决定位置。
 
 ### 当前可运行后端 Profile
 
@@ -396,51 +406,135 @@ verification_failed
 
 Agent3 未完成时必须返回 `null`，不能生成空的“可信结果”。
 
-正式结构草案：
+当前 Agent3 对应交接包中的 Agent4-V4。源接口建议为 `POST /api/v1/agent4/check`，后续统一编排接口可以继续把结果放在任务结果的 `verification` 字段中。
+
+请求核心字段：
 
 ```json
 {
-  "source_schema_version": "TBD",
-  "overall_status": "partially_supported",
-  "atomic_claims": [
+  "task_id": "string",
+  "evidence_list": [
     {
-      "claim_id": "claim_001",
-      "text": "...",
-      "status": "unsupported",
-      "reason": "...",
-      "evidence_refs": ["B0001", "R0001"],
-      "suggested_revision": "..."
+      "evidence_id": "E001",
+      "source_agent": "string",
+      "source_model": "string",
+      "region": "string",
+      "evidence_type": "image_pair | change_mask | building_mask | damage_mask | statistics | text_description | disaster_grade",
+      "image_evidence": {},
+      "finding": "string",
+      "supporting_statistics": {},
+      "confidence": 0.8,
+      "limitations": "string"
     }
   ],
-  "verified_description_en": "..."
+  "claim_list": [
+    {
+      "claim_id": "C001",
+      "claim": "string",
+      "related_evidence_ids": ["E001"]
+    }
+  ]
 }
 ```
 
-Agent3 不得接收 `review_flags.json`。
+响应结构：
+
+```json
+{
+  "task_id": "string",
+  "source_version": "Agent4-V4",
+  "check_result": {
+    "task_id": "string",
+    "overall_status": "pass | warning",
+    "claim_checks": [
+      {
+        "claim_id": "C001",
+        "claim": "string",
+        "support_status": "supported | partially_supported | unsupported | contradicted | exaggerated",
+        "evidence_ids": ["E001"],
+        "reason": "string",
+        "suggested_revision": "string 或 null"
+      }
+    ],
+    "supported_claims": ["C001"],
+    "partially_supported_claims": [],
+    "unsupported_claims": [],
+    "contradicted_claims": [],
+    "exaggerated_claims": [],
+    "revision_suggestions": []
+  },
+  "verified_evidence_package": {
+    "task_id": "string",
+    "overall_status": "pass | warning",
+    "accepted_claims": [],
+    "qualified_claims": [],
+    "rejected_claims": [],
+    "source_evidence_ids": ["E001"],
+    "limitations": []
+  }
+}
+```
+
+规则：
+
+- `accepted_claims` 只来自 `supported`。
+- `qualified_claims` 只来自 `partially_supported`，进入报告时必须保留限定措辞。
+- `rejected_claims` 来自 `unsupported`、`contradicted`、`exaggerated`，不得作为正式灾情结论。
+- 人员伤亡、经济损失、政府响应、救援状态等没有证据时必须判为 `unsupported`。
+- Agent3 不得接收 Agent1 的 `review_flags.json`；人工复核提示属于报告与业务流程。
 
 ### 7.4 report
 
 Agent4 未完成时返回 `null`。
 
-正式结构草案：
+当前 Agent4 对应交接包中的 Agent5-V2。源接口建议为 `POST /api/v1/agent5/report`，输入只能使用 Agent3 输出的 `verified_evidence_package`。
+
+正式响应结构：
 
 ```json
 {
-  "source_schema_version": "TBD",
-  "language": "zh-CN",
-  "title": "遥感灾情评估报告",
-  "summary": "...",
-  "manual_review": {
-    "required": true,
-    "reasons": [],
-    "note": "..."
+  "task_id": "string",
+  "source_version": "Agent5-V2",
+  "platform_report_json": {
+    "task_id": "string",
+    "report_type": "remote_sensing_disaster_assessment",
+    "report_version": "agent5_v2_from_agent4_v4",
+    "overall_status": "pass | warning",
+    "data_basis": {
+      "source": "Agent4-V4 verified_evidence_package",
+      "source_evidence_ids": ["E001"]
+    },
+    "key_findings": [],
+    "qualified_findings": [],
+    "excluded_claims": [],
+    "limitations": [],
+    "final_conclusion": "string"
   },
-  "markdown_artifact_id": "art_report_md",
-  "json_artifact_id": "art_report_json"
+  "markdown_report": "string"
 }
 ```
 
-Agent4 只能使用 Agent3 验证后的事实和 Agent1 的结构化统计；`unsupported`、`contradicted` 不进入正式结论，`exaggerated` 必须降级措辞。
+`markdown_report` 必须按照以下标题和顺序输出：
+
+```text
+## 1. 报告摘要
+## 2. 核心灾情指标
+## 3. 分区评估结果
+## 4. 证据支撑与一致性校验
+## 5. 证据局限与不可下结论事项
+```
+
+前端同时渲染 Markdown 和 `platform_report_json` 卡片，优先展示：
+
+```text
+overall_status
+key_findings
+qualified_findings
+excluded_claims
+limitations
+```
+
+Agent4 返回前必须经过源包规定的 `normalize_agent5_output.py` 后处理。正式报告正文只能使用 `accepted_claims` 和 `qualified_claims`；`rejected_claims` 只能在一致性校验或被排除结论中展示。
 
 ---
 

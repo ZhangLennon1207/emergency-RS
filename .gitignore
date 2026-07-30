@@ -12,6 +12,9 @@ node_modules
 dist
 dist-ssr
 *.local
+playwright-report/
+test-results/
+blob-report/
 
 # Python
 __pycache__/

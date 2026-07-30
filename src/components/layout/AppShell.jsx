@@ -10,7 +10,8 @@ import {
   Siren,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { isRealApiEnabled } from '../../services/backendJobService.js'
 
 const SIDEBAR_STORAGE_KEY = 'emergency-rs-sidebar-collapsed'
 
@@ -23,6 +24,7 @@ const navigation = [
 ]
 
 function AppShell() {
+  const location = useLocation()
   const [collapsed, setCollapsed] = useState(
     () => window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true',
   )
@@ -47,7 +49,15 @@ function AppShell() {
         <nav className="sidebar-nav" aria-label="主导航">
           {navigation.map(({ to, label, icon: Icon }) => (
             <NavLink
-              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              className={() => {
+                const pathname = location.pathname
+                const isActive =
+                  pathname === to
+                  || (to === '/tasks' && /^\/tasks\/[^/]+$/.test(pathname))
+                  || (to === '/evidence' && pathname.endsWith('/evidence'))
+                  || (to === '/reports' && pathname.endsWith('/report'))
+                return `nav-item ${isActive ? 'active' : ''}`
+              }}
               data-label={label}
               key={to}
               to={to}
@@ -61,9 +71,11 @@ function AppShell() {
         <div className="sidebar-status">
           <div className="status-line">
             <Activity size={16} />
-            <span>演示环境运行中</span>
+            <span>{isRealApiEnabled ? '真实后端模式' : 'Mock 演示模式'}</span>
           </div>
-          <p>当前使用 Mock 数据，后续可直接切换 FastAPI 服务。</p>
+          <p>{isRealApiEnabled
+            ? '任务将提交至 FastAPI，并从模型电脑读取运行结果。'
+            : '任务记录保存在当前浏览器，不会上传真实影像。'}</p>
         </div>
 
         <button
@@ -85,9 +97,9 @@ function AppShell() {
             <span className="eyebrow">Multi-agent damage assessment</span>
             <strong>可信遥感损毁评估与应急研判多智能体系统</strong>
           </div>
-          <div className="system-state">
+          <div className={`system-state ${isRealApiEnabled ? 'state-online' : 'state-mock'}`}>
             <i />
-            Agent 服务待接入
+            {isRealApiEnabled ? 'FastAPI 已配置' : 'Mock 演示模式'}
           </div>
         </header>
         <main className="page-container">

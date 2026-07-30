@@ -12,6 +12,7 @@ import {
 } from 'recharts'
 import PageHeader from '../components/common/PageHeader.jsx'
 import StatusBadge from '../components/common/StatusBadge.jsx'
+import { isRealApiEnabled } from '../services/backendJobService.js'
 import { getDashboard } from '../services/taskService.js'
 
 const kpiIcons = [FileCheck2, Bot, ShieldAlert, CheckCircle2]
@@ -43,15 +44,15 @@ function OverviewPage() {
         <div>
           <span className="live-pill">
             <i />
-            Mock 演示链路已就绪
+            {isRealApiEnabled ? '真实后端模式已启用' : 'Mock 演示链路已就绪'}
           </span>
           <h2>让每一条灾情结论都能回到遥感证据</h2>
           <p>
-            前端已按照五智能体业务链路组织任务、结果、证据和报告。Agent 后端接入后，只需替换服务层数据源。
+            前端已按照四智能体业务链路组织任务、结果、证据和报告。Agent 后端接入后，只需替换服务层数据源。
           </p>
         </div>
-        <div className="hero-flow" aria-label="五智能体流程">
-          {['视觉感知', '量化评估', '描述生成', '证据校验', '报告生成'].map((name, index) => (
+        <div className="hero-flow" aria-label="四智能体流程">
+          {['视觉感知与量化', '变化描述', '证据校验', '报告生成'].map((name, index) => (
             <div key={name}>
               <span>{index + 1}</span>
               <small>{name}</small>
@@ -86,7 +87,12 @@ function OverviewPage() {
             <span className="muted-inline"><Clock3 size={15} />每两小时统计</span>
           </div>
           <div className="chart-container">
-            <ResponsiveContainer height="100%" width="100%">
+            <ResponsiveContainer
+              height="100%"
+              initialDimension={{ width: 800, height: 285 }}
+              minWidth={0}
+              width="100%"
+            >
               <AreaChart data={dashboard.trend}>
                 <defs>
                   <linearGradient id="taskFill" x1="0" x2="0" y1="0" y2="1">

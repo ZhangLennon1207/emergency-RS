@@ -104,6 +104,29 @@ npm run build
 npm run preview
 ```
 
+## 自动化功能测试
+
+首次在新电脑运行测试时，需要下载 Playwright 使用的 Chromium：
+
+```bash
+npm run test:e2e:install
+```
+
+运行全部功能测试：
+
+```bash
+npm run test:e2e
+```
+
+打开可视化测试界面或查看最近一次 HTML 报告：
+
+```bash
+npm run test:e2e:ui
+npm run test:e2e:report
+```
+
+测试会自动启动 Vite，无需提前运行 `npm run dev`。失败时的截图、Trace 和视频保存在 `test-results/`，HTML 报告保存在 `playwright-report/`。
+
 ## GitHub Pages 部署
 
 本仓库包含 `.github/workflows/deploy.yml`，用于 GitHub Pages 自动部署。

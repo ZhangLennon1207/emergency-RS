@@ -4,7 +4,18 @@ import { Link, useParams } from 'react-router-dom'
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import PageHeader from '../components/common/PageHeader.jsx'
 import StatusBadge from '../components/common/StatusBadge.jsx'
+import ArtifactGallery from '../components/results/ArtifactGallery.jsx'
 import { getTask } from '../services/taskService.js'
+
+function InputImage({ fileName, label, preview }) {
+  return (
+    <div className={preview ? 'uploaded-preview' : ''}>
+      {preview ? <img alt={label} src={preview} /> : <Image size={24} />}
+      <span>{label}</span>
+      <small>{fileName}</small>
+    </div>
+  )
+}
 
 function TaskDetailPage() {
   const { taskId } = useParams()
@@ -52,7 +63,7 @@ function TaskDetailPage() {
           <span>当前状态</span>
           <StatusBadge value={task.status} />
         </div>
-        <div><span>协同进度</span><strong>{completedAgents} / 5 Agent</strong></div>
+        <div><span>协同进度</span><strong>{completedAgents} / 4 Agent</strong></div>
         <div><span>综合风险</span><StatusBadge value={task.riskLevel} /></div>
         <div><span>影像输入</span><strong>{task.preImageName} / {task.postImageName}</strong></div>
       </section>
@@ -77,9 +88,11 @@ function TaskDetailPage() {
               <small>Agent{index + 1}</small>
               <div className="progress-track"><i style={{ width: `${agent.progress}%` }} /></div>
               <p>
-                {agent.status === 'completed' && '阶段输出已生成，可进入下游智能体。'}
+                {['completed', 'succeeded', 'success'].includes(agent.status) && '阶段输出已生成，可进入下游智能体。'}
                 {agent.status === 'running' && `正在执行，当前进度 ${agent.progress}%`}
                 {agent.status === 'pending' && '等待上游智能体完成。'}
+                {agent.status === 'failed' && (agent.error?.message ?? '该阶段执行失败，已保留其他可用结果。')}
+                {agent.status === 'skipped' && (agent.error?.message ?? '因上游结果不可用，本阶段未执行。')}
               </p>
             </article>
           ))}
@@ -89,13 +102,16 @@ function TaskDetailPage() {
       <section className="result-grid">
         <article className="panel">
           <div className="panel-heading">
-            <div><span className="eyebrow">Agent1 evidence</span><h2>遥感视觉证据</h2></div>
+            <div><span className="eyebrow">Task input</span><h2>双时相遥感输入</h2></div>
             <FileJson2 size={20} />
           </div>
           <div className="image-comparison">
-            <div><Image size={24} /><span>灾前影像</span><small>{task.preImageName}</small></div>
-            <div className="damage-preview"><Image size={24} /><span>五级损伤图</span><small>建筑 Mask 约束已启用</small></div>
+            <InputImage fileName={task.preImageName} label="灾前影像" preview={task.preImagePreview} />
+            <InputImage fileName={task.postImageName} label="灾后影像" preview={task.postImagePreview} />
           </div>
+          {task.imageWidth && task.imageHeight ? (
+            <p className="image-dimension-note">已通过尺寸一致性检查：{task.imageWidth} × {task.imageHeight}</p>
+          ) : null}
           <div className="legend-strip">
             {task.damageLevels.map((item) => <span key={item.level}><i style={{ background: item.color }} />{item.level}级</span>)}
           </div>
@@ -103,11 +119,16 @@ function TaskDetailPage() {
 
         <article className="panel">
           <div className="panel-heading">
-            <div><span className="eyebrow">Agent2 assessment</span><h2>损伤量化评估</h2></div>
+            <div><span className="eyebrow">Agent1 metrics</span><h2>损伤量化指标</h2></div>
           </div>
           <div className="damage-chart-row">
             <div className="mini-pie">
-              <ResponsiveContainer height="100%" width="100%">
+              <ResponsiveContainer
+                height="100%"
+                initialDimension={{ width: 180, height: 180 }}
+                minWidth={0}
+                width="100%"
+              >
                 <PieChart>
                   <Pie data={task.damageLevels} dataKey="ratio" innerRadius={48} outerRadius={70} paddingAngle={2}>
                     {task.damageLevels.map((item) => <Cell fill={item.color} key={item.level} />)}
@@ -129,12 +150,29 @@ function TaskDetailPage() {
         </article>
       </section>
 
+      {task.artifacts ? (
+        <section className="panel">
+          <div className="panel-heading">
+            <div><span className="eyebrow">Artifacts</span><h2>任务成果文件</h2></div>
+          </div>
+          <ArtifactGallery artifacts={task.artifacts} />
+        </section>
+      ) : null}
+
       <section className="next-actions">
         <Link className="action-card" to={`/tasks/${task.id}/evidence`}>
-          <div><span>下一步</span><strong>查看证据可信校验</strong></div><ArrowRight size={20} />
+          <div>
+            <span>{task.verification ? 'Agent3 已完成' : 'Agent3 等待中'}</span>
+            <strong>{task.verification ? '查看证据可信校验' : '查看校验等待状态'}</strong>
+          </div>
+          <ArrowRight size={20} />
         </Link>
         <Link className="action-card" to={`/tasks/${task.id}/report`}>
-          <div><span>成果</span><strong>预览最终研判报告</strong></div><ArrowRight size={20} />
+          <div>
+            <span>{task.report ? 'Agent4 已完成' : 'Agent4 等待中'}</span>
+            <strong>{task.report ? '预览最终研判报告' : '查看报告等待状态'}</strong>
+          </div>
+          <ArrowRight size={20} />
         </Link>
       </section>
     </div>

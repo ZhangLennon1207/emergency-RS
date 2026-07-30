@@ -1,8 +1,10 @@
-import { ArrowLeft, Download, FileJson2, FileText } from 'lucide-react'
+import { ArrowLeft, FileText } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import PageHeader from '../components/common/PageHeader.jsx'
-import { buildReport, getTask, listTasks } from '../services/taskService.js'
+import GeneratedReportPanel from '../components/results/GeneratedReportPanel.jsx'
+import { normalizeGeneratedReport } from '../services/agentResultAdapter.js'
+import { getTask, listTasks } from '../services/taskService.js'
 
 function downloadFile(name, content, type) {
   const url = URL.createObjectURL(new Blob([content], { type }))
@@ -25,13 +27,13 @@ function ReportsPage() {
   }, [params.taskId])
 
   if (!task) return <div className="loading-panel">正在生成报告预览…</div>
-  const report = buildReport(task)
+  const report = normalizeGeneratedReport(task.report)
 
   return (
     <div className="page-stack">
       <PageHeader
         actions={params.taskId ? <Link className="button button-secondary" to={`/tasks/${task.id}`}><ArrowLeft size={17} />返回任务</Link> : null}
-        description={`${task.id} · Agent5 结构化成果预览`}
+        description={`${task.id} · Agent4 结构化可信成果预览`}
         eyebrow="Report center"
         title="灾害损毁评估报告"
       />
@@ -39,32 +41,29 @@ function ReportsPage() {
       <section className="report-layout">
         <article className="panel report-document">
           <span className="document-label"><FileText size={16} />Markdown 预览</span>
-          <h1>{task.name}</h1>
-          <h2>任务摘要</h2>
-          <ul>
-            <li>任务编号：{task.id}</li>
-            <li>灾害类型：{task.disasterLabel}</li>
-            <li>研判区域：{task.location}</li>
-            <li>综合风险：高风险</li>
-          </ul>
-          <h2>损毁评估</h2>
-          <p>建筑区域共检测 15,820 个有效像素，其中 3—4 级严重损伤占 23%。损伤区域主要集中在研究区中部和东南方向。</p>
-          <h2>可信校验</h2>
-          <p>系统核验 3 条关键描述：1 条证据支持，1 条存在夸大，1 条缺少证据。未经支持的道路中断结论未写入正式结论。</p>
-          <h2>处置建议</h2>
-          <p>建议优先对中部连续损毁区域开展人工复核，并结合道路与人口数据进行二次研判。</p>
+          {report ? (
+            <>
+              <h1>{task.name}</h1>
+              <h2>1. 报告摘要</h2>
+              <p>任务 {task.id} 面向{task.location}开展{task.disasterLabel}遥感灾情评估。</p>
+              <h2>2. 核心灾情指标</h2>
+              <p>建筑区域共检测 15,820 个有效像素，其中 3—4 级严重损伤占 23%。</p>
+              <h2>3. 分区评估结果</h2>
+              <p>{report.keyFindings[0] ?? '当前没有可进入正式报告的分区结论。'}</p>
+              <h2>4. 证据支撑与一致性校验</h2>
+              <p>报告仅采用经 Agent3 校验后进入 accepted 或 qualified 集合的结论。</p>
+              <h2>5. 证据局限与不可下结论事项</h2>
+              <p>{report.limitations.join('；') || '当前未声明证据局限。'}</p>
+            </>
+          ) : <div className="report-preview-empty">Agent4 尚未生成可预览的正式报告。</div>}
         </article>
 
-        <aside className="panel export-panel">
-          <span className="eyebrow">Deliverables</span>
-          <h2>成果文件</h2>
-          <p>当前由前端根据 Mock 结果生成，接入 Agent5 后将直接展示后端报告。</p>
-          <button className="button button-primary button-full" onClick={() => downloadFile(`${task.id}.md`, report, 'text/markdown')} type="button">
-            <Download size={17} />下载 Markdown
-          </button>
-          <button className="button button-secondary button-full" onClick={() => downloadFile(`${task.id}.json`, JSON.stringify(task, null, 2), 'application/json')} type="button">
-            <FileJson2 size={17} />下载结构化 JSON
-          </button>
+        <aside className="report-side">
+          <GeneratedReportPanel
+            onDownloadJson={report ? () => downloadFile(`${task.id}.json`, JSON.stringify(task.report, null, 2), 'application/json') : null}
+            onDownloadMarkdown={report ? () => downloadFile(`${task.id}.md`, report.markdownReport, 'text/markdown') : null}
+            result={report}
+          />
         </aside>
       </section>
     </div>
