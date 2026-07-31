@@ -1,0 +1,9 @@
+{
+  "agent_code": "agent2",
+  "capability": "change_description",
+  "display_name": "灾情变化描述生成智能体",
+  "source_version": null,
+  "entrypoint": "backend.agents.agent2.adapter:run",
+  "owner": "待填写",
+  "status": "waiting_for_submission"
+}

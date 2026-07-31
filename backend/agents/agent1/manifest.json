@@ -1,0 +1,9 @@
+{
+  "agent_code": "agent1",
+  "capability": "visual_evidence",
+  "display_name": "时空视觉证据感知智能体",
+  "source_version": null,
+  "entrypoint": "backend.agents.agent1.adapter:run",
+  "owner": "待填写",
+  "status": "waiting_for_submission"
+}

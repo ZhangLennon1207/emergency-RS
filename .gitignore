@@ -24,6 +24,21 @@ __pycache__/
 venv/
 .venv/
 
+# Backend runtime data and model files
+backend/models/
+backend/data/
+backend/outputs/
+backend/**/outputs/
+backend/**/*.pt
+backend/**/*.pth
+backend/**/*.ckpt
+backend/**/*.safetensors
+backend/**/*.onnx
+backend/**/*.npy
+backend/**/*.npz
+backend/**/*.tif
+backend/**/*.tiff
+
 # Docker
 docker-compose.override.yml
 

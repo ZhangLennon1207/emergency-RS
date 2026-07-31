@@ -1,0 +1,9 @@
+{
+  "agent_code": "agent4",
+  "capability": "report_generation",
+  "display_name": "可信灾情报告生成智能体",
+  "source_version": "Agent5-V2",
+  "entrypoint": "backend.agents.agent4.adapter:run",
+  "owner": "待填写",
+  "status": "waiting_for_submission"
+}

@@ -1,0 +1,9 @@
+{
+  "agent_code": "agent3",
+  "capability": "evidence_verification",
+  "display_name": "证据可信校验智能体",
+  "source_version": "Agent4-V4",
+  "entrypoint": "backend.agents.agent3.adapter:run",
+  "owner": "待填写",
+  "status": "waiting_for_submission"
+}
