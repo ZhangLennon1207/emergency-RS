@@ -1,0 +1,19 @@
+{
+  "contract_version": "draft-0.2",
+  "pipeline_version": "competition-four-agent-v1",
+  "job": {
+    "job_id": "job_example_001",
+    "status": "partial_success",
+    "progress": 50,
+    "agent_runs": [
+      {"agent_code": "agent1", "capability": "visual_evidence", "status": "succeeded", "progress": 100},
+      {"agent_code": "agent2", "capability": "change_description", "status": "succeeded", "progress": 100},
+      {"agent_code": "agent3", "capability": "evidence_verification", "status": "skipped", "progress": 0},
+      {"agent_code": "agent4", "capability": "report_generation", "status": "skipped", "progress": 0}
+    ]
+  },
+  "visual_evidence": null,
+  "change_description": null,
+  "verification": null,
+  "report": null
+}

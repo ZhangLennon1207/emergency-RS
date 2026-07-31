@@ -12,8 +12,8 @@ UI 专为向应急管理部门演示而设计，展示一个具备不确定性�
 - 带置信度标注的区域级研判结果表
 - 图像-掩码-文本对齐的证据链工作流
 - AI 智能体报告中心，输出结构化灾情简报
-- 研判任务创建与五智能体执行状态演示
-- Agent4 证据可信校验和 Agent5 报告预览下载
+- 研判任务创建与四智能体执行状态演示
+- Agent3 证据可信校验和 Agent4 报告预览下载
 - Mock 数据模式，便于在后端接入前独立开发和演示
 - 静态构建产物，支持 GitHub Pages、Vercel 或 Netlify 部署
 
@@ -28,6 +28,12 @@ UI 专为向应急管理部门演示而设计，展示一个具备不确定性�
 ---
 
 ## 团队协作指南
+
+完整的新成员准备、Agent代码放置、分支、Commit、PR、审查、冲突解决和最终集成流程见：
+
+- [团队GitHub协作与Agent代码交付指南](docs/team-collaboration-guide.md)
+- [后端与智能体集成区说明](backend/README.md)
+- [接口契约区说明](contracts/README.md)
 
 ### 环境准备（每个成员只需做一次）
 
@@ -81,11 +87,15 @@ refactor: 重构了xxx模块
 
 ```text
 emergency-RS/
-├── src/          # 前端页面、组件和服务层
-├── backend/      # 后端（大模型相关代码统一放这里，逐步用 AI 整理）
-├── docs/         # 前后端实施方案
-├── public/       # 静态资源
-└── CHANGELOG.md  # 更新日志（每次修改后建议更新）
+├── src/                    # React前端页面、组件和服务层
+├── e2e/                    # Playwright浏览器功能测试
+├── public/                 # 静态资源和前端Mock
+├── backend/
+│   ├── agents/             # Agent1～Agent4独立提交区
+│   └── app/                # FastAPI公共接口与流水线调度
+├── contracts/              # 前后端共享JSON契约和标准样例
+├── docs/                   # 方案、接口和团队协作文档
+└── CHANGELOG.md            # 项目变动日志
 ```
 
 ---
