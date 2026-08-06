@@ -61,6 +61,10 @@ backend/**/*.npz
 backend/**/*.tif
 backend/**/*.tiff
 
+# Model architecture source code is safe; only model asset directories/files stay ignored.
+!backend/agents/*/src/models/
+!backend/agents/*/src/models/**/*.py
+
 # Docker
 docker-compose.override.yml
 

@@ -1,0 +1,10 @@
+{
+  "device": "cuda",
+  "image_size": 512,
+  "model_paths": {
+    "building": "<set outside the repository>",
+    "damage": "<set outside the repository>",
+    "road_binary": "<set outside the repository>",
+    "road_status": "<set outside the repository>"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "source_schema_version": "2.1",
+  "agent_code": "agent1",
+  "capability": "visual_evidence",
+  "sample_id": "sample-001",
+  "status": "succeeded",
+  "summary": {
+    "total_buildings": 0,
+    "damaged_buildings": 0,
+    "building_damage_ratio": 0.0,
+    "affected_road_ratio": 0.0,
+    "scene_risk_level": "none",
+    "review_required": false
+  },
+  "artifacts": []
+}

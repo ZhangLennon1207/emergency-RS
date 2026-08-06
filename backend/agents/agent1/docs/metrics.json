@@ -1,0 +1,32 @@
+{
+  "source": "sanitized aggregate values from the legacy local project",
+  "not_a_benchmark_claim": true,
+  "building_segmentation": {
+    "best_epoch": 20,
+    "validation_iou": 0.75856,
+    "validation_dice": 0.827288
+  },
+  "damage_segmentation": {
+    "reported_epoch": 20,
+    "validation_miou_all": 0.680948,
+    "validation_miou_foreground": 0.259076
+  },
+  "road_binary_segmentation": {
+    "best_epoch": 17,
+    "validation_iou": 0.4423890277,
+    "validation_dice": 0.6134115266
+  },
+  "road_status_segmentation": {
+    "test_samples": 91,
+    "raw_road_miou": 0.6603229642,
+    "postprocessed_road_miou": 0.6656716026,
+    "postprocessed_flooded_precision": 0.6156142865,
+    "postprocessed_flooded_recall": 0.7249015585
+  },
+  "pipeline_smoke_batch": {
+    "random_seed": 20260707,
+    "requested": 20,
+    "succeeded": 20,
+    "failed": 0
+  }
+}

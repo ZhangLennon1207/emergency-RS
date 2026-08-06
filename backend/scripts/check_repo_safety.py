@@ -86,11 +86,12 @@ def main() -> int:
         if path.suffix.lower() in FORBIDDEN_SUFFIXES:
             violations.append(f"forbidden tracked extension: {relative}")
         is_agent_path = "backend" in lowered_parts and "agents" in lowered_parts
-        forbidden_directory = bool(
-            lowered_parts & (
-                FORBIDDEN_PARTS if is_agent_path else GLOBAL_FORBIDDEN_BACKEND_PARTS
-            )
+        matched_parts = lowered_parts & (
+            FORBIDDEN_PARTS if is_agent_path else GLOBAL_FORBIDDEN_BACKEND_PARTS
         )
+        if path.suffix.lower() == ".py" and "src" in lowered_parts:
+            matched_parts.discard("models")
+        forbidden_directory = bool(matched_parts)
         if "backend" in lowered_parts and forbidden_directory:
             violations.append(f"forbidden backend asset directory: {relative}")
 
