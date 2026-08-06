@@ -5,6 +5,6 @@
   "source_version": "agent1-four-model-v1",
   "entrypoint": "backend.agents.agent1.adapter:run",
   "owner": "AutigerBai",
-  "status": "source_migrated_local_validation_required",
+  "status": "local_gpu_validated",
   "model_weights_in_repository": false
 }

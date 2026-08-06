@@ -1,0 +1,12 @@
+{
+  "source_schema_version": "1.0",
+  "agent_code": "agent2",
+  "capability": "change_description",
+  "sample_id": "sample-001",
+  "status": "succeeded",
+  "language": "en",
+  "description": "Model-generated description placeholder for contract illustration only.",
+  "verification_status": "unverified",
+  "notice": "Model-generated change description; evidence verification has not yet been performed.",
+  "artifacts": []
+}
