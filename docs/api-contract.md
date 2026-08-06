@@ -40,12 +40,12 @@ Agent4 report_generation: source Agent5-V2
 
 后端和数据库必须同时保存 `agent_code`、`capability` 与 `source_version`。前端按 `capability` 决定展示区域，不根据源版本中的 Agent 数字决定位置。
 
-### 当前可运行后端 Profile
+### 当前已迁移后端 Profile
 
-最新 Agent1 + Agent2 网页后端已经实现，前端首轮真实联调必须优先兼容它：
+当前仓库已实现 Agent1 + Agent2 的 FastAPI Job API 和本地 adapter 编排，并通过无模型模拟测试；迁移后的 Agent1/2 各自通过了本地 GPU 回归。React 前端尚未与该后端和真实模型完成实际联调，以下 Profile 是下一轮联调基线：
 
 ```text
-profile: agent12-web-backend-v1
+profile: agent12-local-adapters-v1
 POST /api/v1/jobs
 GET  /api/v1/jobs/{job_id}
 GET  /api/v1/health
@@ -62,6 +62,8 @@ succeeded
 partial_success
 failed
 ```
+
+在这个 Profile 中，`succeeded` 仅表示 Agent1/2 都成功，不代表四智能体全流程完成。Agent3/4 必须返回 `skipped`，`verification` 与 `report` 必须为 `null`。
 
 这组状态由前端适配为统一页面状态，未来 Agent3/4 接入后再新增阶段，不要求当前后端立即改变。
 
