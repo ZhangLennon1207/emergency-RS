@@ -1,9 +1,11 @@
 {
   "agent_code": "agent2",
   "capability": "change_description",
-  "display_name": "灾情变化描述生成智能体",
-  "source_version": null,
+  "display_name": "灾前灾后变化描述智能体",
+  "source_version": "agent2-qwen25vl-lora-inference-v1",
   "entrypoint": "backend.agents.agent2.adapter:run",
-  "owner": "待填写",
-  "status": "waiting_for_submission"
+  "owner": "AutigerBai",
+  "status": "local_gpu_validated",
+  "training_source_in_repository": false,
+  "model_weights_in_repository": false
 }

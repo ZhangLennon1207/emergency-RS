@@ -1,0 +1,41 @@
+{
+  "source": "sanitized aggregate values from the legacy local paired ablation",
+  "not_a_benchmark_claim": true,
+  "review_status": "pending_two_reviewer_blind_review",
+  "strict_conclusion_allowed": false,
+  "conditions": {
+    "paired": {
+      "record_count": 20,
+      "mean_word_count": 93.0,
+      "mean_claim_count": 5.15,
+      "mean_temporal_claim_ratio": 0.7158333333,
+      "format_compliance_rate": 1.0
+    },
+    "post_only": {
+      "record_count": 20,
+      "mean_word_count": 101.5,
+      "mean_claim_count": 5.2,
+      "mean_temporal_claim_ratio": 0.5639880952,
+      "format_compliance_rate": 1.0
+    },
+    "mismatched_pre": {
+      "record_count": 100,
+      "mean_word_count": 100.44,
+      "mean_claim_count": 5.58,
+      "mean_temporal_claim_ratio": 0.6576428571,
+      "format_compliance_rate": 1.0
+    }
+  },
+  "paired_vs_post_only": {
+    "mean_rouge_l_f1": 0.2928629247,
+    "mean_token_jaccard": 0.3233400471
+  },
+  "paired_vs_mismatched_pre": {
+    "mean_rouge_l_f1": 0.3294891404,
+    "mean_token_jaccard": 0.3379085377
+  },
+  "mismatch_output_variance": {
+    "mean_pairwise_rouge_distance": 0.6288440302,
+    "mean_pairwise_jaccard_distance": 0.6356536694
+  }
+}

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="250" viewBox="0 0 720 250" role="img" aria-labelledby="title desc">
+  <title id="title">Agent2 paired ablation aggregate summary</title>
+  <desc id="desc">Record counts and mean temporal claim ratios for paired, post-only, and mismatched-pre conditions. Blind review is pending.</desc>
+  <rect width="720" height="250" fill="#f8fafc"/>
+  <text x="28" y="35" font-family="sans-serif" font-size="20" fill="#0f172a">Agent2 paired ablation — aggregate only</text>
+  <text x="28" y="58" font-family="sans-serif" font-size="13" fill="#b45309">Automatic analysis; two-reviewer blind review pending</text>
+  <g font-family="sans-serif" font-size="14" fill="#334155">
+    <text x="28" y="103">Paired (n=20)</text><rect x="210" y="87" width="358" height="20" rx="3" fill="#2563eb"/><text x="580" y="103">0.716</text>
+    <text x="28" y="148">Post-only (n=20)</text><rect x="210" y="132" width="282" height="20" rx="3" fill="#64748b"/><text x="504" y="148">0.564</text>
+    <text x="28" y="193">Mismatched pre (n=100)</text><rect x="210" y="177" width="329" height="20" rx="3" fill="#d97706"/><text x="551" y="193">0.658</text>
+  </g>
+  <text x="28" y="229" font-family="sans-serif" font-size="12" fill="#475569">Bar value: mean automatically detected temporal-claim ratio. Not a grounding score.</text>
+</svg>

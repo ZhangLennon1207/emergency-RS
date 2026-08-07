@@ -79,6 +79,11 @@ def main() -> int:
     violations: list[str] = []
     for path in tracked_files():
         relative = path.relative_to(REPO_ROOT)
+        # ``git ls-files --cached`` still reports tracked files deleted in the
+        # working tree. Deletions contain no content to scan and must not make
+        # the pre-commit safety check crash.
+        if not path.is_file():
+            continue
         lowered_parts = {part.lower() for part in relative.parts}
 
         if path.stat().st_size > MAX_TRACKED_BYTES:
