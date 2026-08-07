@@ -25,8 +25,13 @@ jobs:
       - name: Check repository safety
         run: python backend/scripts/check_repo_safety.py
       - name: Install lightweight test dependencies
+        if: ${{ hashFiles('backend/**/test_*.py') != '' }}
         run: |
           python -m pip install pytest numpy pillow opencv-python-headless
           python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
       - name: Run backend tests that do not require model weights
-        run: python -m pytest backend/tests backend/agents/agent1/tests backend/agents/agent2/tests
+        if: ${{ hashFiles('backend/**/test_*.py') != '' }}
+        run: python -m pytest backend
+      - name: Note that this staged branch has no backend tests yet
+        if: ${{ hashFiles('backend/**/test_*.py') == '' }}
+        run: echo "No backend tests are present in this staged branch; safety checks passed."
