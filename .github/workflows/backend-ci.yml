@@ -27,7 +27,7 @@ jobs:
       - name: Install lightweight test dependencies
         if: ${{ hashFiles('backend/**/test_*.py') != '' }}
         run: |
-          python -m pip install pytest numpy pillow opencv-python-headless
+          python -m pip install pytest numpy scipy pillow opencv-python-headless
           python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
       - name: Run backend tests that do not require model weights
         if: ${{ hashFiles('backend/**/test_*.py') != '' }}
