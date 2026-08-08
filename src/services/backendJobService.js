@@ -21,10 +21,11 @@ async function parseResponse(response) {
   return payload
 }
 
-export async function createBackendJob(preImage, postImage) {
+export async function createBackendJob(preImage, postImage, sampleId = '') {
   const body = new FormData()
   body.append('pre_image', preImage)
   body.append('post_image', postImage)
+  if (sampleId.trim()) body.append('sample_id', sampleId.trim())
 
   const response = await fetch(buildApiUrl('/api/v1/jobs'), {
     method: 'POST',

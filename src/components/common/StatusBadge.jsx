@@ -9,6 +9,7 @@ const labels = {
   success: '执行成功',
   partial_success: '部分成功',
   skipped: '已跳过',
+  not_integrated: '待接入',
   completed: '已完成',
   failed: '执行失败',
   cancelled: '已取消',

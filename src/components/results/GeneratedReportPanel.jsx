@@ -17,7 +17,7 @@ function FindingGroup({ emptyText, items, title, tone }) {
   )
 }
 
-function GeneratedReportPanel({ onDownloadJson, onDownloadMarkdown, result }) {
+function GeneratedReportPanel({ onDownloadJson, onDownloadMarkdown, pendingReason = '', result }) {
   if (!result) {
     return (
       <section className="panel agent-result-empty">
@@ -25,7 +25,7 @@ function GeneratedReportPanel({ onDownloadJson, onDownloadMarkdown, result }) {
         <div>
           <span className="eyebrow">Agent4 · Report generation</span>
           <h2>等待可信报告</h2>
-          <p>Agent4 必须在 Agent3 完成证据校验后运行。当前没有可下载的正式报告。</p>
+          <p>{pendingReason || 'Agent4 必须在 Agent3 完成证据校验后运行。当前没有可下载的正式报告。'}</p>
         </div>
       </section>
     )

@@ -13,6 +13,7 @@ const terminalStatuses = new Set(['succeeded', 'partial_success', 'failed'])
 
 const stageLabels = {
   queued: '等待 GPU 队列',
+  starting: '正在准备模型任务',
   running_agent1: '正在分析建筑和道路视觉证据',
   running_agent2: '正在生成灾前—灾后变化描述',
   assembling: '正在整理统一结果',
@@ -21,33 +22,68 @@ const stageLabels = {
   failed: '分析失败',
 }
 
+const agentDefinitions = [
+  { agent_code: 'agent1', display_name: '时空视觉证据感知' },
+  { agent_code: 'agent2', display_name: '灾情变化描述生成' },
+  { agent_code: 'agent3', display_name: '证据可信校验' },
+  { agent_code: 'agent4', display_name: '可信报告生成' },
+]
+
+function inferredRun(job, definition) {
+  const code = definition.agent_code
+  const result = job?.result?.[code]
+  const error = (job?.errors ?? []).find((item) => item.agent === code || item.agent_code === code)
+
+  if (result) {
+    const waitingForIntegration = ['agent3', 'agent4'].includes(code)
+      && result.status === 'skipped'
+      && job?.result?.four_agent_pipeline_complete === false
+    return {
+      ...definition,
+      status: waitingForIntegration ? 'not_integrated' : result.status,
+      progress: ['succeeded', 'success', 'completed', 'failed'].includes(result.status) ? 100 : 0,
+      error,
+      reason: result.reason,
+    }
+  }
+
+  if (code === 'agent1') {
+    if (job?.status === 'running_agent1') return { ...definition, status: 'running', progress: job.progress ?? 0 }
+    if (['running_agent2', 'assembling'].includes(job?.status)) return { ...definition, status: 'succeeded', progress: 100 }
+    if (error) return { ...definition, status: 'failed', progress: 100, error }
+    return { ...definition, status: 'pending', progress: 0 }
+  }
+
+  if (code === 'agent2') {
+    if (job?.status === 'running_agent2') return { ...definition, status: 'running', progress: job.progress ?? 0 }
+    if (job?.status === 'assembling') return { ...definition, status: 'succeeded', progress: 100 }
+    if (error) return { ...definition, status: 'failed', progress: 100, error }
+    return { ...definition, status: 'pending', progress: 0 }
+  }
+
+  return {
+    ...definition,
+    status: 'not_integrated',
+    progress: 0,
+    reason: '当前双智能体联调范围尚未接入该阶段。',
+  }
+}
+
 function getAgentRuns(job) {
   const declaredRuns = job?.agent_runs ?? job?.result?.agent_runs ?? []
-  if (declaredRuns.length) return declaredRuns
+  const declaredByCode = new Map(declaredRuns.map((run) => [run.agent_code, run]))
 
-  const result = job?.result
-  if (!result) return []
-
-  return [
-    {
-      agent_code: 'agent1',
-      display_name: '时空视觉证据感知',
-      status: result.agent1?.status ?? (job.status === 'running_agent1' ? 'running' : 'pending'),
-      progress: result.agent1?.status ? 100 : job.status === 'running_agent1' ? job.progress : 0,
-    },
-    {
-      agent_code: 'agent2',
-      display_name: '灾情变化描述生成',
-      status: result.agent2?.status ?? (job.status === 'running_agent2' ? 'running' : 'pending'),
-      progress: result.agent2?.status ? 100 : job.status === 'running_agent2' ? job.progress : 0,
-    },
-  ]
+  return agentDefinitions.map((definition) => {
+    const declared = declaredByCode.get(definition.agent_code)
+    return declared ? { ...definition, ...declared } : inferredRun(job, definition)
+  })
 }
 
 function LiveJobPage() {
   const { jobId } = useParams()
   const [job, setJob] = useState(null)
   const [error, setError] = useState('')
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     let active = true
@@ -63,7 +99,10 @@ function LiveJobPage() {
           timer = window.setTimeout(load, 2000)
         }
       } catch (reason) {
-        if (active) setError(reason.message)
+        if (active) {
+          setError(reason.message)
+          timer = window.setTimeout(load, 5000)
+        }
       }
     }
 
@@ -72,23 +111,35 @@ function LiveJobPage() {
       active = false
       window.clearTimeout(timer)
     }
-  }, [jobId])
+  }, [jobId, reloadKey])
 
   const artifacts = job?.result?.artifacts ?? {}
   const summary = job?.result?.agent1?.summary
+  const reviewFlags = job?.result?.agent1?.review_flags
   const description = job?.result?.agent2?.description
+  const claimList = job?.result?.agent2?.claim_list ?? []
   const verificationPayload = job?.result?.verification ?? job?.result?.agent3?.result ?? null
   const reportPayload = job?.result?.report ?? job?.result?.agent4?.result ?? null
   const verification = normalizeEvidenceVerification(verificationPayload)
   const report = normalizeGeneratedReport(reportPayload)
   const errors = useMemo(() => job?.errors ?? [], [job])
   const agentRuns = useMemo(() => getAgentRuns(job), [job])
+  const fourAgentPipelineComplete = job?.result?.four_agent_pipeline_complete === true
 
-  if (error) {
+  function retryNow() {
+    setError('')
+    setReloadKey((current) => current + 1)
+  }
+
+  if (error && !job) {
     return (
       <div className="error-state">
         <strong>后端任务读取失败</strong>
         <span>{error}</span>
+        <div className="error-state-actions">
+          <button className="button button-primary" onClick={retryNow} type="button"><RefreshCw size={16} />重新连接</button>
+          <Link className="button button-secondary" to="/tasks">返回任务中心</Link>
+        </div>
       </div>
     )
   }
@@ -110,6 +161,24 @@ function LiveJobPage() {
         <div><span>总体进度</span><strong>{job.progress ?? 0}%</strong></div>
         <div><span>轮询频率</span><strong>每 2 秒自动更新</strong></div>
       </section>
+
+      {!fourAgentPipelineComplete ? (
+        <section className="panel pipeline-scope-note">
+          <AlertTriangle size={21} />
+          <div>
+            <strong>当前为 Agent1 + Agent2 联调结果</strong>
+            <span>Agent3 证据校验与 Agent4 报告生成尚未接入；即使任务显示执行成功，也不代表四智能体完整研判完成。</span>
+          </div>
+        </section>
+      ) : null}
+
+      {error ? (
+        <section className="panel backend-errors connection-warning">
+          <AlertTriangle size={21} />
+          <div><strong>最新状态读取失败，页面将在 5 秒后重试</strong><p>{error}</p></div>
+          <button className="button button-secondary" onClick={retryNow} type="button"><RefreshCw size={15} />立即重试</button>
+        </section>
+      ) : null}
 
       {!terminalStatuses.has(job.status) ? (
         <section className="panel live-progress">
@@ -133,8 +202,7 @@ function LiveJobPage() {
         </section>
       ) : null}
 
-      {agentRuns.length ? (
-        <section className="panel">
+      <section className="panel">
           <div className="panel-heading">
             <div><span className="eyebrow">Agent runs</span><h2>智能体执行状态</h2></div>
             {job.status === 'partial_success' ? <StatusBadge value="partial_success" /> : null}
@@ -152,13 +220,13 @@ function LiveJobPage() {
                 <p>{run.error?.message
                   ?? (run.status === 'failed' ? '该阶段执行失败，请查看错误信息。' : null)
                   ?? (run.status === 'skipped' ? '因上游结果不可用，本阶段未执行。' : null)
+                  ?? (run.status === 'not_integrated' ? run.reason ?? '当前阶段等待后端接入。' : null)
                   ?? (['succeeded', 'success', 'completed'].includes(run.status) ? '阶段输出已生成。' : null)
                   ?? (run.status === 'running' ? `正在执行，当前进度 ${run.progress ?? 0}%` : '等待执行。')}</p>
               </article>
             ))}
           </div>
-        </section>
-      ) : null}
+      </section>
 
       {job.result ? (
         <>
@@ -168,6 +236,22 @@ function LiveJobPage() {
             </div>
             <ArtifactGallery artifacts={artifacts} resolveUrl={resolveBackendArtifactUrl} />
           </section>
+
+          {reviewFlags?.review_required ? (
+            <section className="panel manual-review-panel">
+              <div className="panel-heading">
+                <div><span className="eyebrow">Manual review</span><h2>建议人工复核</h2></div>
+                <StatusBadge value="pending_review" />
+              </div>
+              <p>该标志表示结果存在需要人工关注的不确定区域，不等同于模型结论错误。</p>
+              {reviewFlags.review_reasons?.length ? (
+                <ul>{reviewFlags.review_reasons.map((item, index) => <li key={`${item.code ?? 'reason'}-${index}`}>{item.message ?? item.reason ?? String(item)}</li>)}</ul>
+              ) : <p className="muted-copy">后端建议复核，但未返回具体原因。</p>}
+              {reviewFlags.report_instruction?.recommended_wording ? (
+                <blockquote>{reviewFlags.report_instruction.recommended_wording}</blockquote>
+              ) : null}
+            </section>
+          ) : null}
 
           <section className="result-grid">
             <article className="panel">
@@ -197,11 +281,25 @@ function LiveJobPage() {
                 <AlertTriangle size={17} />
                 <span>模型生成的变化描述，尚未经过 Agent3 证据校验。</span>
               </div>
+              {claimList.length ? (
+                <div className="unverified-claims">
+                  <strong>待核验 Claim（{claimList.length}）</strong>
+                  <ol>
+                    {claimList.map((claim, index) => (
+                      <li key={claim.claim_id ?? index}>
+                        <div><code>{claim.claim_id ?? `C${String(index + 1).padStart(3, '0')}`}</code><StatusBadge value="not_integrated" /></div>
+                        <p>{claim.claim ?? claim.text}</p>
+                        {claim.related_evidence_ids?.length ? <small>关联证据：{claim.related_evidence_ids.join('、')}</small> : <small>尚未关联已核验证据</small>}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              ) : null}
             </article>
           </section>
 
-          <EvidenceVerificationPanel result={verification} />
-          <GeneratedReportPanel result={report} />
+          <EvidenceVerificationPanel pendingReason={job.result.agent3?.reason} result={verification} />
+          <GeneratedReportPanel pendingReason={job.result.agent4?.reason} result={report} />
         </>
       ) : null}
     </div>

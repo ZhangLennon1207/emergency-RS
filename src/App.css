@@ -601,7 +601,8 @@
 .status-critical { color: #b83a3a; background: #ffe8e8; }
 
 .status-queued,
-.status-skipped { color: #53657b; background: #edf2f7; }
+.status-skipped,
+.status-not_integrated { color: #53657b; background: #edf2f7; }
 
 .filter-bar {
   display: flex;
@@ -734,6 +735,14 @@
 .empty-state strong,
 .error-state strong {
   color: var(--ink-900);
+}
+
+.error-state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 8px;
 }
 
 .create-grid {
@@ -1031,6 +1040,12 @@
 
 .agent-skipped {
   opacity: 0.78;
+}
+
+.agent-not_integrated {
+  opacity: 0.82;
+  border-style: dashed;
+  background: #f7f9fc;
 }
 
 .live-agent-pipeline {
@@ -1750,6 +1765,31 @@
   background: #fff7f7;
 }
 
+.pipeline-scope-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  color: #8a5c06;
+  border-color: #efd391;
+  background: #fff9e9;
+}
+
+.pipeline-scope-note div {
+  display: grid;
+  gap: 5px;
+}
+
+.pipeline-scope-note span {
+  color: var(--ink-700);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.connection-warning .button {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
 .backend-errors p {
   margin: 3px 0 0;
   color: var(--ink-700);
@@ -1789,6 +1829,11 @@
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
   gap: 14px;
+}
+
+.artifact-sections {
+  display: grid;
+  gap: 16px;
 }
 
 .artifact-tabs {
@@ -1896,6 +1941,69 @@
   font-size: 12px;
 }
 
+.artifact-downloads {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-muted);
+}
+
+.artifact-downloads > div {
+  display: grid;
+  gap: 3px;
+  margin-bottom: 10px;
+}
+
+.artifact-downloads > div span,
+.artifact-downloads li span {
+  color: var(--ink-500);
+  font-size: 11px;
+}
+
+.artifact-downloads ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.artifact-downloads li {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+}
+
+.artifact-downloads li > div {
+  min-width: 0;
+  display: grid;
+  flex: 1;
+  gap: 2px;
+}
+
+.artifact-downloads li strong,
+.artifact-downloads li span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.artifact-downloads a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--blue-600);
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1933,6 +2041,74 @@
   font-size: 12px;
   border-radius: 10px;
   background: #fff7df;
+}
+
+.manual-review-panel {
+  border-color: #efd391;
+  background: #fffdf6;
+}
+
+.manual-review-panel > p,
+.manual-review-panel li,
+.manual-review-panel blockquote {
+  color: var(--ink-700);
+  line-height: 1.7;
+}
+
+.manual-review-panel ul {
+  margin: 12px 0;
+  padding-left: 22px;
+}
+
+.manual-review-panel blockquote {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border-left: 3px solid #d89a1c;
+  border-radius: 0 10px 10px 0;
+  background: #fff7df;
+}
+
+.unverified-claims {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.unverified-claims ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.unverified-claims li {
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-muted);
+}
+
+.unverified-claims li > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.unverified-claims code {
+  color: var(--blue-600);
+  font-size: 11px;
+}
+
+.unverified-claims p {
+  margin: 8px 0 5px;
+  color: var(--ink-700);
+  line-height: 1.65;
+}
+
+.unverified-claims small {
+  color: var(--ink-500);
 }
 
 .form-error {
@@ -2106,6 +2282,16 @@
   .artifact-preview figcaption {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .connection-warning {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .connection-warning .button {
+    width: 100%;
+    margin-left: 0;
   }
 
   .task-summary {
