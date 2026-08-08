@@ -1,6 +1,6 @@
 # Agent3：证据可信校验
 
-当前Agent3对应历史交接版本 `Agent4-V4`。负责人将Claim拆分、证据对齐、规则兜底和校验代码提交到本目录。
+当前 Agent3 对应历史交接版本 `Agent4-V4`。负责人将证据对齐、规则兜底和校验代码提交到本目录。Claim 拆分属于 Agent2 Adapter 的正式输出后处理；Agent3 只消费 `claim_list` 并逐条校验。
 
 ## 输入
 

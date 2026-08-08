@@ -49,6 +49,10 @@ class Settings:
     frontend_origins: tuple[str, ...] = ("http://localhost:5173",)
     agent1_config: dict[str, Any] = field(default_factory=dict)
     agent2_config: dict[str, Any] = field(default_factory=dict)
+    agent34_base_url: str | None = None
+    agent34_shared_token: str | None = None
+    agent34_connect_timeout_seconds: float = 5.0
+    agent34_read_timeout_seconds: float = 900.0
     max_upload_bytes: int = 25 * 1024 * 1024
     max_image_pixels: int = 100_000_000
     queue_poll_seconds: float = 0.5
@@ -93,6 +97,14 @@ class Settings:
             frontend_origins=origins,
             agent1_config=agent1_config,
             agent2_config=agent2_config,
+            agent34_base_url=os.environ.get("AGENT34_BASE_URL") or None,
+            agent34_shared_token=os.environ.get("AGENT34_SHARED_TOKEN") or None,
+            agent34_connect_timeout_seconds=_env_float(
+                "AGENT34_CONNECT_TIMEOUT_SECONDS", 5.0
+            ),
+            agent34_read_timeout_seconds=_env_float(
+                "AGENT34_READ_TIMEOUT_SECONDS", 900.0
+            ),
             max_upload_bytes=_env_int("MAX_UPLOAD_BYTES", 25 * 1024 * 1024),
             max_image_pixels=_env_int("MAX_IMAGE_PIXELS", 100_000_000),
             queue_poll_seconds=_env_float("QUEUE_POLL_SECONDS", 0.5),
@@ -111,9 +123,26 @@ class Settings:
         agent2_ready = _configured_path(
             self.agent2_config.get("base_model_path"), directory=True
         ) and _configured_path(self.agent2_config.get("lora_path"), directory=True)
+        agent34_ready = bool(self.agent34_base_url and self.agent34_shared_token)
         return {
             "agent1": {"configured": agent1_ready, "mode": "local_adapter"},
             "agent2": {"configured": agent2_ready, "mode": "local_adapter"},
-            "agent3": {"configured": False, "mode": "not_integrated"},
-            "agent4": {"configured": False, "mode": "not_integrated"},
+            "agent3": {
+                "configured": False,
+                "remote_service_configured": agent34_ready,
+                "mode": (
+                    "remote_service_pending_orchestration"
+                    if agent34_ready
+                    else "not_integrated"
+                ),
+            },
+            "agent4": {
+                "configured": False,
+                "remote_service_configured": agent34_ready,
+                "mode": (
+                    "remote_service_pending_orchestration"
+                    if agent34_ready
+                    else "not_integrated"
+                ),
+            },
         }

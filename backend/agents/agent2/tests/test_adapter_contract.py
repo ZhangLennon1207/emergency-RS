@@ -53,7 +53,20 @@ def test_adapter_returns_unverified_json_and_relative_artifacts(tmp_path, monkey
     )
 
     assert result["status"] == "succeeded"
+    assert result["source_schema_version"] == "1.1"
     assert result["verification_status"] == "unverified"
+    assert result["description"] == "Visible structural and road changes."
+    assert result["claim_builder_version"] == "sentence-span-v1"
+    assert result["claim_list"] == [
+        {
+            "claim_id": "C001",
+            "claim": "Visible structural and road changes.",
+            "language": "en",
+            "source": "agent2_description_postprocess",
+            "source_text_span": {"start": 0, "end": 36},
+            "related_evidence_ids": [],
+        }
+    ]
     assert len(result["artifacts"]) == 4
     assert all(not Path(item["path"]).is_absolute() for item in result["artifacts"])
     json.dumps(result)

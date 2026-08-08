@@ -24,7 +24,7 @@ ARTIFACT_TYPES = {
     "fusion/fused_overlay.png": "fused_overlay",
     "fusion/visual_compare.png": "visual_compare",
     "for_agent3/evidence_ledger_core.json": "evidence_ledger",
-    "for_agent4/agent1_report_summary.json": "agent1_report_summary",
+    "for_agent4/agent1_report_summary.json": "report_summary",
     "for_agent4/review_flags.json": "review_flags",
     "run_manifest.json": "run_manifest",
 }
@@ -96,6 +96,13 @@ def _artifact_list(sample_root: Path, work_dir: Path) -> list[dict[str, str]]:
     return artifacts
 
 
+def _read_json_artifact(path: Path) -> dict[str, Any] | None:
+    if not path.is_file():
+        return None
+    value = json.loads(path.read_text(encoding="utf-8"))
+    return value if isinstance(value, dict) else None
+
+
 def run(
     payload: dict[str, Any],
     work_dir: str,
@@ -142,8 +149,16 @@ def run(
 
     sample_root = output_root / sample_id
     _sanitize_generated_json(sample_root, task_root)
+    review_flags = _read_json_artifact(
+        sample_root / "for_agent4" / "review_flags.json"
+    )
     result = {
         "source_schema_version": "2.1",
+        "source_schema_versions": {
+            "evidence_ledger": "2.1",
+            "report_summary": "1.1",
+            "review_flags": "1.2",
+        },
         "agent_code": "agent1",
         "capability": "visual_evidence",
         "sample_id": sample_id,
@@ -156,6 +171,7 @@ def run(
             "scene_risk_level": raw_result["scene_risk_level"],
             "review_required": raw_result["review_required"],
         },
+        "review_flags": review_flags,
         "artifacts": _artifact_list(sample_root, task_root),
     }
     json.dumps(result, ensure_ascii=False)

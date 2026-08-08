@@ -1,11 +1,25 @@
 {
-  "source_schema_version": "1.0",
+  "source_schema_version": "1.1",
   "agent_code": "agent2",
   "capability": "change_description",
   "sample_id": "sample-001",
   "status": "succeeded",
   "language": "en",
   "description": "Model-generated description placeholder for contract illustration only.",
+  "claim_builder_version": "sentence-span-v1",
+  "claim_list": [
+    {
+      "claim_id": "C001",
+      "claim": "Model-generated description placeholder for contract illustration only.",
+      "language": "en",
+      "source": "agent2_description_postprocess",
+      "source_text_span": {
+        "start": 0,
+        "end": 69
+      },
+      "related_evidence_ids": []
+    }
+  ],
   "verification_status": "unverified",
   "notice": "Model-generated change description; evidence verification has not yet been performed.",
   "artifacts": []

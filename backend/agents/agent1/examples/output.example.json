@@ -1,5 +1,10 @@
 {
   "source_schema_version": "2.1",
+  "source_schema_versions": {
+    "evidence_ledger": "2.1",
+    "report_summary": "1.1",
+    "review_flags": "1.2"
+  },
   "agent_code": "agent1",
   "capability": "visual_evidence",
   "sample_id": "sample-001",
@@ -11,6 +16,32 @@
     "affected_road_ratio": 0.0,
     "scene_risk_level": "none",
     "review_required": false
+  },
+  "review_flags": {
+    "schema_version": "1.2",
+    "sample_id": "sample-001",
+    "review_required": false,
+    "uncertainty_summary": {
+      "uncertain_building_count": 0,
+      "uncertain_building_ratio": 0.0,
+      "uncertain_building_ids": [],
+      "uncertain_road_pixels": 0,
+      "uncertain_road_ratio": 0.0
+    },
+    "review_reasons": [],
+    "report_instruction": {
+      "must_include_manual_review_note": false,
+      "recommended_wording": ""
+    },
+    "routing": {
+      "intended_recipient": "backend_review_display",
+      "legacy_artifact_path": "for_agent4/review_flags.json",
+      "do_not_send_to": [
+        "agent2_description_generation",
+        "agent3_evidence_verification",
+        "agent4_report_generation_model"
+      ]
+    }
   },
   "artifacts": []
 }

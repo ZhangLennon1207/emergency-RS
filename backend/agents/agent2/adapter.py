@@ -28,6 +28,12 @@ def _load_pipeline_class():
     return Agent2Pipeline
 
 
+def _build_claim_list(description: str) -> list[dict[str, Any]]:
+    from backend.agents.agent2.src.claim_builder import build_claim_list
+
+    return build_claim_list(description)
+
+
 def run(
     payload: dict[str, Any],
     work_dir: str,
@@ -90,14 +96,21 @@ def run(
                 }
             )
 
+    description = raw_result["description"]
+    claim_list = raw_result.get("claim_list")
+    if not isinstance(claim_list, list) or not claim_list:
+        claim_list = _build_claim_list(description)
+
     result = {
-        "source_schema_version": "1.0",
+        "source_schema_version": "1.1",
         "agent_code": "agent2",
         "capability": "change_description",
         "sample_id": sample_id,
         "status": "succeeded",
         "language": "en",
-        "description": raw_result["description"],
+        "description": description,
+        "claim_builder_version": "sentence-span-v1",
+        "claim_list": claim_list,
         "verification_status": "unverified",
         "notice": "模型生成的变化描述，尚未经过证据校验。",
         "artifacts": artifacts,

@@ -65,24 +65,27 @@ Agent1：agent1_visual_evidence
   └── review_flags.json
 
 Agent2：agent2_change_description
-  └── 基于灾前/灾后原图生成英文描述
+  ├── 基于灾前/灾后原图生成英文描述
+  └── Adapter 保留原文并确定性生成 claim_list
 
 Agent3：agent3_evidence_verification
-  ├── 英文描述拆分为原子 Claims
+  ├── 读取 Agent2 已生成的原子 Claims
   ├── 对照 Agent1 客观证据逐条校验
   └── 生成 verified_description_en
 
 Agent4：agent4_report_generation
-  ├── 读取 Agent3 可信结果
-  ├── 读取 Agent1 场景摘要和 review_flags
+  ├── 模型只读取 Agent3 verified_evidence_package
   └── 生成中文 JSON/Markdown 报告
+
+总控后端展示层：
+  └── 可在 Agent4 报告之外附加 Agent1 review_flags 人工复核提示
 ```
 
 关键边界：
 
 - Agent2 只能读取灾前、灾后原图，不能提前读取 Agent1 结果。
 - Agent3 不得读取 `review_flags.json`。
-- Agent4 不重新自由看图，只使用校验结果、结构化统计和复核标志。
+- Agent4 不重新自由看图，模型事实输入只能是 Agent3 的 `verified_evidence_package`；Agent1 的 `review_flags` 仅由总控后端在展示层附加。
 - Agent2/3 阶段保持英文，Agent4 阶段统一翻译为中文。
 
 ---
@@ -197,8 +200,8 @@ exaggerated
 ```text
 evidence_ledger_core.json  schema_version = 2.1
 agent1_report_summary.json schema_version = 1.1
-review_flags.json          schema_version = 1.1
-agent2_output.json         schema_version = 1.0
+review_flags.json          schema_version = 1.2
+agent2_output.json         schema_version = 1.1
 ```
 
 后端必须保留 `source_schema_version`，并转换 JSON 中的本机绝对路径。
@@ -270,8 +273,8 @@ overall_assessment.scene_risk_level
 | Agent 文件 | artifact_type | 前端用途 |
 | --- | --- | --- |
 | `for_agent3/evidence_ledger_core.json` | `evidence_ledger` | 证据引用和实例详情 |
-| `for_agent4/agent1_report_summary.json` | `agent1_report_summary` | 核心统计和报告数值 |
-| `for_agent4/review_flags.json` | `review_flags` | 最终复核提示 |
+| `for_agent4/agent1_report_summary.json`（历史兼容路径） | `report_summary` | 核心统计；公共 Artifact key 为 `agent1_report_summary` |
+| `for_agent4/review_flags.json`（历史兼容路径） | `review_flags` | 总控后端/前端人工复核提示；不输入任何下游模型 |
 | `run_manifest.json` | `agent1_run_manifest` | 模型版本和运行追踪 |
 
 ---
@@ -282,7 +285,7 @@ overall_assessment.scene_risk_level
 
 | 文件 | artifact_type | 前端用途 |
 | --- | --- | --- |
-| `agent2_output.json` | `change_description` | 英文变化描述 |
+| `agent2_output.json` | `change_description` | 英文变化描述及 Adapter 生成的 `claim_list` |
 | `raw_response.txt` | `change_description_raw` | 原始响应，可选查看 |
 | `prompt_snapshot.txt` | `agent2_prompt` | 实验复现信息 |
 | `run_manifest.json` | `agent2_run_manifest` | 模型、LoRA 和生成参数 |

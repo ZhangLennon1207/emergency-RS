@@ -114,8 +114,8 @@ run_manifest.json
 | --- | --- |
 | `evidence_ledger_core.json` | `2.1` |
 | `agent1_report_summary.json` | `1.1` |
-| `review_flags.json` | `1.1` |
-| `agent2_output.json` | `1.0` |
+| `review_flags.json` | 历史样例 `1.1`；当前路由语义修正版 `1.2` |
+| `agent2_output.json` | 历史样例 `1.0`；当前 Adapter `1.1` |
 
 ### evidence_ledger_core.json
 
@@ -181,6 +181,10 @@ evidence_images
 ```
 
 ### review_flags.json
+
+当前 `1.2` 版本的正式接收方是 `backend_review_display`。历史目录名
+`for_agent4/` 仅为兼容已有产物而保留；该文件不得输入 Agent2、Agent3 或
+Agent4 模型。
 
 顶层字段：
 

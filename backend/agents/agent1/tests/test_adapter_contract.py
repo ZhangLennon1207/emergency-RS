@@ -21,6 +21,7 @@ class FakePipeline:
         sample_root = output_root / sample_id
         (sample_root / "fusion").mkdir(parents=True)
         (sample_root / "for_agent3").mkdir()
+        (sample_root / "for_agent4").mkdir()
         (sample_root / "fusion" / "fused_overlay.png").write_bytes(b"png")
         (sample_root / "for_agent3" / "evidence_ledger_core.json").write_text(
             json.dumps(
@@ -35,6 +36,28 @@ class FakePipeline:
         )
         (sample_root / "run_manifest.json").write_text(
             json.dumps({"output": str(sample_root.resolve())}),
+            encoding="utf-8",
+        )
+        (sample_root / "for_agent4" / "review_flags.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": "1.2",
+                    "sample_id": sample_id,
+                    "review_required": True,
+                    "review_reasons": [
+                        {
+                            "type": "building_damage_presence_uncertainty",
+                            "message": "需要人工复核。",
+                        }
+                    ],
+                    "routing": {
+                        "intended_recipient": "backend_review_display",
+                        "legacy_artifact_path": str(
+                            sample_root / "for_agent4" / "review_flags.json"
+                        ),
+                    },
+                }
+            ),
             encoding="utf-8",
         )
         return {
@@ -64,6 +87,15 @@ def test_adapter_returns_json_and_relative_artifacts(tmp_path, monkeypatch) -> N
 
     assert result["capability"] == "visual_evidence"
     assert result["summary"]["damaged_buildings"] == 1
+    assert result["source_schema_versions"]["review_flags"] == "1.2"
+    assert result["review_flags"]["review_required"] is True
+    assert (
+        result["review_flags"]["routing"]["intended_recipient"]
+        == "backend_review_display"
+    )
+    assert not Path(
+        result["review_flags"]["routing"]["legacy_artifact_path"]
+    ).is_absolute()
     assert all(not Path(item["path"]).is_absolute() for item in result["artifacts"])
     json.dumps(result)
 

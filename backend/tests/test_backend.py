@@ -115,10 +115,12 @@ def test_orchestrator_calls_local_adapters_and_skips_agent34(tmp_path: Path) -> 
     store.initialize()
     create_store_job(settings, store)
     seen_configs: dict[str, dict[str, Any]] = {}
+    seen_payloads: dict[str, dict[str, Any]] = {}
 
     def loader(agent_code: str):
         def fake_adapter(payload, work_dir, config):
             seen_configs[agent_code] = config
+            seen_payloads[agent_code] = payload
             root = Path(work_dir)
             if agent_code == "agent1":
                 artifact = root / "agent1" / "sample-001" / "fusion" / "fused_overlay.png"
@@ -126,6 +128,11 @@ def test_orchestrator_calls_local_adapters_and_skips_agent34(tmp_path: Path) -> 
                 artifact.write_bytes(image_bytes())
                 return {
                     "status": "succeeded",
+                    "source_schema_versions": {
+                        "evidence_ledger": "2.1",
+                        "report_summary": "1.1",
+                        "review_flags": "1.2",
+                    },
                     "summary": {
                         "total_buildings": 10,
                         "damaged_buildings": 3,
@@ -133,6 +140,15 @@ def test_orchestrator_calls_local_adapters_and_skips_agent34(tmp_path: Path) -> 
                         "affected_road_ratio": 0.25,
                         "scene_risk_level": "medium",
                         "review_required": False,
+                    },
+                    "review_flags": {
+                        "schema_version": "1.2",
+                        "sample_id": "sample-001",
+                        "review_required": False,
+                        "review_reasons": [],
+                        "routing": {
+                            "intended_recipient": "backend_review_display"
+                        },
                     },
                     "artifacts": [
                         {
@@ -143,7 +159,19 @@ def test_orchestrator_calls_local_adapters_and_skips_agent34(tmp_path: Path) -> 
                 }
             return {
                 "status": "succeeded",
+                "source_schema_version": "1.1",
+                "language": "en",
                 "description": "A deterministic change description.",
+                "claim_builder_version": "sentence-span-v1",
+                "claim_list": [
+                    {
+                        "claim_id": "C001",
+                        "claim": "A deterministic change description.",
+                        "language": "en",
+                        "related_evidence_ids": [],
+                    }
+                ],
+                "notice": "模型生成的变化描述，尚未经过证据校验。",
                 "artifacts": [],
             }
 
@@ -156,8 +184,12 @@ def test_orchestrator_calls_local_adapters_and_skips_agent34(tmp_path: Path) -> 
     assert job["status"] == "succeeded"
     assert seen_configs["agent1"]["marker"] == "agent1-explicit-config"
     assert seen_configs["agent2"]["marker"] == "agent2-explicit-config"
+    assert "visual_evidence" not in seen_payloads["agent2"]
     assert job["result"]["agent1"]["summary"]["damaged_buildings"] == 3
+    assert job["result"]["agent1"]["review_flags"]["review_required"] is False
     assert job["result"]["agent2"]["description"].startswith("A deterministic")
+    assert job["result"]["agent2"]["claim_list"][0]["claim_id"] == "C001"
+    assert job["result"]["sample_id"] == "sample-001"
     assert job["result"]["agent3"]["status"] == "skipped"
     assert job["result"]["agent4"]["status"] == "skipped"
     assert job["result"]["verification"] is None

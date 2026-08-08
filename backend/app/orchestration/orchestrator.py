@@ -152,7 +152,9 @@ class JobOrchestrator:
             progress=55,
             errors_json=errors,
         )
-        agent2_payload = {**payload, "visual_evidence": agent1_result if agent1_ok else None}
+        # Agent2 must remain independent from Agent1 and only receives the
+        # paired pre/post images plus the shared sample identifier.
+        agent2_payload = dict(payload)
         agent2_ok, agent2_result = self._run_agent(
             agent_code="agent2",
             payload=agent2_payload,
@@ -182,6 +184,7 @@ class JobOrchestrator:
         artifacts = build_artifact_index(job_root, job_id, successful_results)
         result = self._build_result(
             job_id=job_id,
+            sample_id=sample_id,
             agent1_ok=agent1_ok,
             agent1_result=agent1_result,
             agent2_ok=agent2_ok,
@@ -209,6 +212,7 @@ class JobOrchestrator:
         self,
         *,
         job_id: str,
+        sample_id: str,
         agent1_ok: bool,
         agent1_result: dict[str, Any],
         agent2_ok: bool,
@@ -226,21 +230,42 @@ class JobOrchestrator:
             "contract_version": self.settings.contract_version,
             "pipeline_version": self.settings.pipeline_version,
             "job_id": job_id,
+            "sample_id": sample_id,
             "scope": "agent1_agent2_local_only",
             "four_agent_pipeline_complete": False,
             "artifacts": artifacts,
             "agent_runs": runs,
             "agent1": {
                 "status": "succeeded" if agent1_ok else "failed",
+                "source_schema_versions": (
+                    agent1_result.get("source_schema_versions") if agent1_ok else None
+                ),
                 "summary": agent1_result.get("summary") if agent1_ok else None,
+                "review_flags": (
+                    agent1_result.get("review_flags") if agent1_ok else None
+                ),
             },
             "agent2": {
                 "status": "succeeded" if agent2_ok else "failed",
+                "source_schema_version": (
+                    agent2_result.get("source_schema_version") if agent2_ok else None
+                ),
                 "description": agent2_result.get("description") if agent2_ok else None,
-                "language": "en",
+                "language": agent2_result.get("language", "en") if agent2_ok else None,
+                "claim_builder_version": (
+                    agent2_result.get("claim_builder_version") if agent2_ok else None
+                ),
+                "claim_list": (
+                    agent2_result.get("claim_list") if agent2_ok else None
+                ),
                 "verified": False,
                 "verification_status": "unverified",
-                "notice": "模型生成的变化描述，尚未经过 Agent3 证据校验。",
+                "notice": (
+                    agent2_result.get("notice")
+                    or "模型生成的变化描述，尚未经过 Agent3 证据校验。"
+                    if agent2_ok
+                    else "Agent2 未成功生成变化描述。"
+                ),
             },
             "agent3": {"status": "skipped", "result": None, "reason": skipped_reason},
             "agent4": {"status": "skipped", "result": None, "reason": skipped_reason},

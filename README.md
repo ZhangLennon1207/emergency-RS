@@ -33,6 +33,8 @@ UI 专为向应急管理部门演示而设计，展示一个具备不确定性�
 
 - [团队GitHub协作与Agent代码交付指南](docs/team-collaboration-guide.md)
 - [后端与智能体集成区说明](backend/README.md)
+- [前端—总控后端当前可执行契约](docs/frontend-backend-current-contract.md)
+- [Agent3/Agent4 跨电脑 HTTP 联调契约](docs/agent34-http-integration-contract.md)
 - [接口契约区说明](contracts/README.md)
 
 ### 环境准备（每个成员只需做一次）

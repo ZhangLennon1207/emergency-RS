@@ -19,6 +19,11 @@ from qwen_vl_utils import process_vision_info
 from transformers import AutoProcessor, BitsAndBytesConfig
 
 try:
+    from .claim_builder import CLAIM_BUILDER_VERSION, build_claim_list
+except ImportError:  # Support direct execution of this file from its directory.
+    from claim_builder import CLAIM_BUILDER_VERSION, build_claim_list
+
+try:
     from transformers import Qwen2_5_VLForConditionalGeneration as ModelClass
 except ImportError:
     from transformers import AutoModelForImageTextToText as ModelClass
@@ -314,13 +319,16 @@ class Agent2Pipeline:
             raw_txt.write_text(raw, encoding="utf-8")
             prompt_snapshot.write_text(prompt, encoding="utf-8")
 
+            claim_list = build_claim_list(description)
             payload = {
-                "schema_version": "1.0",
+                "schema_version": "1.1",
                 "agent_id": "agent2",
                 "agent_name": "change_description",
                 "sample_id": sample_id,
                 "language": "en",
                 "description": description,
+                "claim_builder_version": CLAIM_BUILDER_VERSION,
+                "claim_list": claim_list,
                 "input_images": {
                     "pre_image": pre_image_path.name,
                     "post_image": post_image_path.name,
@@ -328,8 +336,7 @@ class Agent2Pipeline:
                 "routing": {
                     "intended_recipient": "agent3_evidence_verification",
                     "agent3_instruction": (
-                        "Split the description into atomic claims and verify each claim "
-                        "against Agent1 evidence."
+                        "Verify each provided claim against Agent1 evidence."
                     ),
                 },
             }
@@ -339,6 +346,7 @@ class Agent2Pipeline:
 
             manifest = {
                 "schema_version": "1.0",
+                "agent2_output_schema_version": "1.1",
                 "sample_id": sample_id,
                 "status": "success",
                 "start_time": start_time,
@@ -372,6 +380,7 @@ class Agent2Pipeline:
                 "sample_id": sample_id,
                 "status": "success",
                 "description": description,
+                "claim_list": claim_list,
                 "sample_root": sample_root.name,
                 "agent2_output": output_json.name,
                 "run_manifest": manifest_json.name,

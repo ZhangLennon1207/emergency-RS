@@ -25,8 +25,8 @@ API contract: draft-0.2
 pipeline: competition-four-agent-v1
 Agent1 evidence_ledger_core: 2.1
 Agent1 agent1_report_summary: 1.1
-Agent1 review_flags: 1.1
-Agent2 agent2_output: 1.0
+Agent1 review_flags: 1.2
+Agent2 agent2_output: 1.1
 Agent3 evidence_verification: source Agent4-V4
 Agent4 report_generation: source Agent5-V2
 ```
@@ -339,7 +339,7 @@ GET /api/v1/jobs/{job_id}/result
   "source_schema_versions": {
     "evidence_ledger": "2.1",
     "report_summary": "1.1",
-    "review_flags": "1.1"
+    "review_flags": "1.2"
   },
   "building_summary": {
     "total_buildings": 18,
@@ -372,7 +372,8 @@ GET /api/v1/jobs/{job_id}/result
     "required": true,
     "uncertain_building_count": 7,
     "uncertain_building_ids": [1, 2, 3, 6, 7, 8, 15],
-    "reasons": []
+    "reasons": [],
+    "intended_recipient": "backend_review_display"
   },
   "artifacts": []
 }
@@ -388,13 +389,33 @@ GET /api/v1/jobs/{job_id}/building-instances?page=1&page_size=50
 
 ```json
 {
-  "source_schema_version": "1.0",
+  "source_schema_version": "1.1",
   "language": "en",
   "description": "...",
+  "claim_builder_version": "sentence-span-v1",
+  "claim_list": [
+    {
+      "claim_id": "C001",
+      "claim": "...",
+      "language": "en",
+      "source": "agent2_description_postprocess",
+      "source_text_span": {"start": 0, "end": 42},
+      "related_evidence_ids": []
+    }
+  ],
   "verification_status": "unverified",
   "notice": "模型生成的变化描述，尚未经过证据校验。"
 }
 ```
+
+`review_flags` 只用于总控后端和前端显示人工复核提示，不属于灾情证据，
+不得发送给 Agent2、Agent3 或 Agent4 模型。历史文件路径
+`for_agent4/review_flags.json` 为兼容既有本地产物而保留，不能据此推断模型路由。
+
+`description` 仍是已训练 Agent2 模型的原始正式输出。`claim_list` 由 Agent2
+Adapter 的确定性后处理追加，不修改模型权重、Prompt 或原始段落。Agent2 不读取
+Agent1 证据，因此 `related_evidence_ids` 允许为空；Agent3 根据完整
+`evidence_list` 返回实际引用的 `evidence_ids`。
 
 `verification_status`：
 
@@ -408,13 +429,19 @@ verification_failed
 
 Agent3 未完成时必须返回 `null`，不能生成空的“可信结果”。
 
-当前 Agent3 对应交接包中的 Agent4-V4。源接口建议为 `POST /api/v1/agent4/check`，后续统一编排接口可以继续把结果放在任务结果的 `verification` 字段中。
+当前 Agent3 对应交接包中的 Agent4-V4。跨电脑服务接口冻结为 `POST /api/v1/agent3/verify`，统一编排接口继续把归一化结果放在任务结果的 `verification` 字段中。历史 `/api/v1/agent4/check` 只允许作为临时兼容别名。
 
 请求核心字段：
 
+跨电脑调用使用 `multipart/form-data`：`payload` 是下列 JSON，`pre_image`
+和 `post_image` 是两个文件字段。不得发送调用方本机绝对路径。
+
 ```json
 {
-  "task_id": "string",
+  "contract_version": "agent34-http-1.0",
+  "pipeline_version": "competition-four-agent-v1",
+  "job_id": "string",
+  "sample_id": "string",
   "evidence_list": [
     {
       "evidence_id": "E001",
@@ -443,10 +470,16 @@ Agent3 未完成时必须返回 `null`，不能生成空的“可信结果”。
 
 ```json
 {
-  "task_id": "string",
+  "contract_version": "agent34-http-1.0",
+  "pipeline_version": "competition-four-agent-v1",
+  "job_id": "string",
+  "sample_id": "string",
+  "agent_code": "agent3",
+  "capability": "evidence_verification",
   "source_version": "Agent4-V4",
   "check_result": {
-    "task_id": "string",
+    "job_id": "string",
+    "sample_id": "string",
     "overall_status": "pass | warning",
     "claim_checks": [
       {
@@ -466,7 +499,8 @@ Agent3 未完成时必须返回 `null`，不能生成空的“可信结果”。
     "revision_suggestions": []
   },
   "verified_evidence_package": {
-    "task_id": "string",
+    "job_id": "string",
+    "sample_id": "string",
     "overall_status": "pass | warning",
     "accepted_claims": [],
     "qualified_claims": [],
@@ -489,16 +523,34 @@ Agent3 未完成时必须返回 `null`，不能生成空的“可信结果”。
 
 Agent4 未完成时返回 `null`。
 
-当前 Agent4 对应交接包中的 Agent5-V2。源接口建议为 `POST /api/v1/agent5/report`，输入只能使用 Agent3 输出的 `verified_evidence_package`。
+当前 Agent4 对应交接包中的 Agent5-V2。跨电脑服务接口冻结为 `POST /api/v1/agent4/report`，模型事实输入只能使用 Agent3 输出的 `verified_evidence_package`。历史 `/api/v1/agent5/report` 只允许作为临时兼容别名。
+
+请求结构：
+
+```json
+{
+  "contract_version": "agent34-http-1.0",
+  "pipeline_version": "competition-four-agent-v1",
+  "job_id": "string",
+  "sample_id": "string",
+  "verified_evidence_package": {}
+}
+```
 
 正式响应结构：
 
 ```json
 {
-  "task_id": "string",
+  "contract_version": "agent34-http-1.0",
+  "pipeline_version": "competition-four-agent-v1",
+  "job_id": "string",
+  "sample_id": "string",
+  "agent_code": "agent4",
+  "capability": "report_generation",
   "source_version": "Agent5-V2",
   "platform_report_json": {
-    "task_id": "string",
+    "job_id": "string",
+    "sample_id": "string",
     "report_type": "remote_sensing_disaster_assessment",
     "report_version": "agent5_v2_from_agent4_v4",
     "overall_status": "pass | warning",
