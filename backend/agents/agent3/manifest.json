@@ -2,8 +2,65 @@
   "agent_code": "agent3",
   "capability": "evidence_verification",
   "display_name": "证据可信校验智能体",
-  "source_version": "Agent4-V4",
+  "source_version": "Agent3_Final_Source_20260808",
   "entrypoint": "backend.agents.agent3.adapter:run",
   "owner": "待填写",
-  "status": "waiting_for_submission"
+  "status": "ready_for_integration",
+
+  "agent_name": "Agent3",
+  "role": "evidence_verification",
+  "runtime_version": "3.1",
+  "selected_model_version": "V5.2",
+  "base_model": "Qwen2.5-VL-7B-Instruct",
+
+  "model_artifact": {
+    "included_in_git": false,
+    "environment_variable": "AGENT3_ADAPTER",
+    "sha256": "77027dc79afdfb0c97cc9dbce4e8a34ad52ab57ade678925659a890e878bfc76"
+  },
+
+  "required_environment": {
+    "AGENT3_BASE_MODEL": "Path to Qwen2.5-VL-7B-Instruct",
+    "AGENT3_ADAPTER": "Path to frozen final Agent3 LoRA",
+    "AGENT3_DATA_ROOT": "Optional root for relative image paths"
+  },
+
+  "input": {
+    "instruction": "Agent3 prompt/instruction containing <image> tokens",
+    "input": "JSON-string or object with evidence and atomic claim",
+    "images": "Ordered image paths matching <image> tokens",
+    "second_pass": "Optional localized second-check request"
+  },
+
+  "output": {
+    "runtime_schema_version": "3.1-runtime",
+    "fields": [
+      "first_check",
+      "crop_check",
+      "final_check",
+      "resolution_state",
+      "human_review_required",
+      "audit"
+    ]
+  },
+
+  "support_status": [
+    "supported",
+    "partially_supported",
+    "unsupported",
+    "contradicted",
+    "exaggerated"
+  ],
+
+  "final_test": {
+    "sample_count": 285,
+    "support_status_accuracy": 0.7859649122807018,
+    "macro_f1": 0.6187326682978858,
+    "weighted_f1": 0.8026771055878608,
+    "schema_exact_rate": 0.9403508771929825,
+    "evidence_id_exact_rate": 0.8771929824561403,
+    "core_exact_rate": 0.743859649122807
+  },
+
+  "adapter_class": "Agent3Adapter"
 }

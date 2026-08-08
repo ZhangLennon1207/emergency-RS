@@ -1,1 +1,9 @@
-# Agent3成员填写本模块额外依赖，不要提交模型权重。
+# Agent3 runtime dependencies (model weights are NOT included in Git)
+torch==2.5.1+cu124
+transformers==4.57.1
+peft==0.17.1
+accelerate==1.11.0
+bitsandbytes==0.50.0
+qwen-vl-utils==0.0.14
+Pillow==12.3.0
+safetensors==0.8.0
