@@ -5,10 +5,10 @@
 ## 当前真实状态
 
 - Agent1：四个指定权重已在迁移后源码上完成严格加载和单样本 GPU 回归。
-- Agent2：Qwen2.5-VL + 指定 LoRA 已在迁移后 adapter 上完成单样本 GPU 回归。
+- Agent2：Qwen2.5-VL + 指定 LoRA 已在迁移后 adapter 上完成单样本 GPU 回归；模型权重和 Prompt 不变，Adapter 额外生成向后兼容的 `claim_list`。
 - FastAPI：Job 创建、查询、上传校验、SQLite 队列、adapter 调度和 Artifact 下载已通过模拟 adapter 测试。
 - React 前端：已有兼容的 Job API 客户端，但尚未与本后端和真实模型完成实际联调。
-- Agent3/4：响应中固定为 `skipped`，`verification` 和 `report` 固定为 `null`；不得据此声明四智能体全流程完成。
+- Agent3/4：跨电脑 HTTP 契约和客户端已进入准备阶段，但尚未接入编排器；响应中仍固定为 `skipped`，`verification` 和 `report` 固定为 `null`，不得据此声明四智能体全流程完成。
 
 ## 目录职责
 
@@ -20,6 +20,8 @@ backend/
 │   ├── config.py           # 环境配置，不含个人路径
 │   ├── db.py               # 本地 SQLite 任务队列
 │   ├── artifacts.py        # 相对路径索引与越界防护
+│   ├── clients/            # Agent3/4 远程 HTTP 客户端（尚未接入编排器）
+│   ├── integration/        # 跨 Agent 标识符与请求契约
 │   └── orchestration/      # Agent1/2 adapter 编排
 ├── tests/                  # 不依赖权重/CUDA 的集成测试
 ├── scripts/                # 仓库安全检查
@@ -43,6 +45,12 @@ python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --workers 1
 ```
 
 只使用一个 worker，避免每个进程重复加载大模型。前端本地环境配置 `VITE_API_BASE_URL=http://127.0.0.1:8000` 和 `VITE_USE_MOCK=false` 后，才能开始实际联调。
+
+Agent3/4 的预备配置为 `AGENT34_BASE_URL`、`AGENT34_SHARED_TOKEN`、`AGENT34_CONNECT_TIMEOUT_SECONDS` 和 `AGENT34_READ_TIMEOUT_SECONDS`。配置这些变量只代表远程地址已填写；在 `evidence_list` 映射经真实样例验证、编排器正式接入并完成真实回归前，健康接口仍不得把 Agent3/4 声明为已集成。跨电脑细节见 `docs/agent34-http-integration-contract.md`。
+
+前端开发应以 `docs/frontend-backend-current-contract.md` 为当前可执行接口基线；
+该文档区分了已经由 FastAPI 实际返回的字段和仍处于待接入状态的 Agent3/4
+结果槽位。
 
 ## API
 

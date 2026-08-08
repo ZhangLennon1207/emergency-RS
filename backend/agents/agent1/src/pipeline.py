@@ -16,7 +16,7 @@ Agent1：时空视觉证据感知与证据账本生成智能体
     6. 建筑与道路融合
     7. 置信度统计
     8. 给 Agent3 输出核心证据账本和融合图
-    9. 给 Agent4 输出场景摘要和人工复核信息
+    9. 给总控后端展示层输出场景摘要和人工复核信息
 
 说明：
     - Agent2 不使用本脚本输出，只读取灾前、灾后原图。
@@ -24,9 +24,11 @@ Agent1：时空视觉证据感知与证据账本生成智能体
         for_agent3/evidence_ledger_core.json
         fusion/fused_color.png
         fusion/fused_overlay.png
-    - Agent4 使用：
+    - 总控后端展示层使用（保留历史目录名以兼容已有产物）：
         for_agent4/agent1_report_summary.json
         for_agent4/review_flags.json
+    - Agent4 模型不直接读取上述文件，只读取 Agent3 输出的
+      verified_evidence_package。
 
 首次运行建议：
     先用一条此前已经成功处理的 EBD 样本测试。
@@ -117,7 +119,7 @@ ROAD_RED_CLOSE_KERNEL = 9
 ROAD_RED_DILATE_ITERATIONS = 1
 ROAD_RED_SECOND_CLOSE_KERNEL = 7
 
-# 不确定性只提供给 Agent4
+# 不确定性只提供给总控后端/前端的人工复核展示，不输入下游模型
 BUILDING_UNCERTAIN_LOW = 0.40
 BUILDING_UNCERTAIN_HIGH = 0.60
 
@@ -2389,8 +2391,11 @@ class Agent1Pipeline:
             Any,
         ],
     ) -> Dict[str, Any]:
-        """
-        只给 Agent4。
+        """Create backend/frontend manual-review hints.
+
+        The ``for_agent4`` artifact directory is retained only for compatibility
+        with already generated Agent1 outputs.  The current four-agent contract
+        does not send these flags to the Agent4 model.
         """
         review_reasons = []
 
@@ -2471,7 +2476,7 @@ class Agent1Pipeline:
 
         return {
             "schema_version":
-                "1.1",
+                "1.2",
 
             "sample_id":
                 sample_id,
@@ -2524,11 +2529,15 @@ class Agent1Pipeline:
 
             "routing": {
                 "intended_recipient":
-                    "agent4_report_generation",
+                    "backend_review_display",
+
+                "legacy_artifact_path":
+                    "for_agent4/review_flags.json",
 
                 "do_not_send_to": [
                     "agent2_description_generation",
                     "agent3_evidence_verification",
+                    "agent4_report_generation_model",
                 ],
             },
         }
@@ -3440,7 +3449,7 @@ class Agent1Pipeline:
 
         run_manifest = {
             "schema_version":
-                "1.0",
+                "1.1",
 
             "sample_id":
                 sample_id,
@@ -3512,6 +3521,17 @@ class Agent1Pipeline:
 
                 "agent4": {
                     "inputs": [
+                        "Agent3 verified_evidence_package"
+                    ],
+
+                    "note": (
+                        "Agent4 模型不直接读取 Agent1 "
+                        "report_summary 或 review_flags。"
+                    ),
+                },
+
+                "backend_review_display": {
+                    "inputs": [
                         str(
                             report_summary_path
                         ),
@@ -3520,9 +3540,9 @@ class Agent1Pipeline:
                         ),
                     ],
 
-                    "plus": (
-                        "Agent3 校验结果与"
-                        "修正描述"
+                    "note": (
+                        "总控后端可在报告展示层附加"
+                        "人工复核提示。"
                     ),
                 },
             },
@@ -3568,6 +3588,21 @@ class Agent1Pipeline:
                         str(
                             review_flags_path
                         ),
+                },
+
+                "backend_review_display": {
+                    "agent1_report_summary":
+                        str(
+                            report_summary_path
+                        ),
+
+                    "review_flags":
+                        str(
+                            review_flags_path
+                        ),
+
+                    "legacy_directory_name":
+                        "for_agent4",
                 },
             },
 

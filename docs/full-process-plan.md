@@ -20,9 +20,9 @@
 创建研判任务
 → 上传灾前、灾后遥感影像
 → Agent1 建筑/道路分割、损伤评估、结构化证据和复核标志
-→ Agent2 基于灾前/灾后原图生成英文变化描述
-→ Agent3 将英文描述拆成原子 Claims 并逐条校验
-→ Agent4 汇总可信事实、统计与复核标志，生成中文报告
+→ Agent2 基于灾前/灾后原图生成英文变化描述，Adapter 保留原文并生成 claim_list
+→ Agent3 读取原子 Claims 并逐条校验
+→ Agent4 只根据 Agent3 可信事实包生成中文报告；总控后端在展示层附加复核标志
 → 前端展示、下载和归档
 ```
 
@@ -31,9 +31,9 @@
 | Agent | 名称 | 核心输出 |
 | --- | --- | --- |
 | Agent1 | `agent1_visual_evidence` | 建筑/道路分割、实例损伤、融合图、证据账本、场景统计、模型置信度和复核标志 |
-| Agent2 | `agent2_change_description` | Qwen2.5-VL-7B + LoRA 生成的英文变化描述 |
-| Agent3 | `agent3_evidence_verification` | 原子 Claims、逐条校验状态、证据引用、理由、建议修正和校验后英文描述 |
-| Agent4 | `agent4_report_generation` | 基于可信事实、场景统计和复核标志生成的中文 JSON/Markdown 报告 |
+| Agent2 | `agent2_change_description` | Qwen2.5-VL-7B + LoRA 生成的英文变化描述及 Adapter 追加的 claim_list |
+| Agent3 | `agent3_evidence_verification` | 逐条校验状态、证据引用、理由、建议修正和校验后英文描述 |
+| Agent4 | `agent4_report_generation` | 模型只基于 Agent3 `verified_evidence_package` 生成中文 JSON/Markdown 报告；总控后端另行附加复核标志 |
 
 ### 后续五智能体演进
 
@@ -271,9 +271,9 @@ FRONTEND_ORIGINS=http://localhost:5173,https://example.github.io
 | Agent | capability | 当前职责 |
 | --- | --- | --- |
 | Agent1 | `visual_evidence` | 建筑/道路分割、实例损伤、融合图、统计、证据账本和复核标志 |
-| Agent2 | `change_description` | 根据灾前/灾后原图独立生成英文描述 |
-| Agent3 | `evidence_verification` | 英文 Claims 拆分、逐条证据校验和修正 |
-| Agent4 | `report_generation` | 使用可信事实和场景统计生成中文报告 |
+| Agent2 | `change_description` | 根据灾前/灾后原图独立生成英文描述；Adapter 生成 claim_list |
+| Agent3 | `evidence_verification` | 消费英文 Claims、逐条证据校验和修正 |
+| Agent4 | `report_generation` | 模型只使用 Agent3 `verified_evidence_package` 生成中文报告 |
 
 为了兼容未来拆分量化智能体的版本，前端和数据库不能只依赖 Agent 编号判断功能。接口应同时返回：
 
@@ -629,7 +629,7 @@ POST   /api/v1/tasks/{task_id}/retry
 ### 执行流程
 
 ```text
-Agent2 英文描述 + Agent1 客观证据
+Agent2 英文描述/claim_list + Agent1 客观证据
 → Agent3（源版本 Agent4-V4）根据 evidence_list 和 claim_list 逐条校验
 → Agent3 生成 check_result 和 verified_evidence_package
 → Agent4（源版本 Agent5-V2）仅读取 verified_evidence_package
@@ -652,12 +652,13 @@ Agent2 英文描述 + Agent1 客观证据
 
 ### 验收条件
 
-- Agent3 能将每条英文描述拆为单一事实 Claims，不漏句、不新增事实。
+- Agent2 Adapter 能从英文描述生成可追溯 Claims，不漏句、不改写原始描述。
+- Agent3 只校验传入 Claims，不在模型内部再次拆分。
 - 每条 Claim 都有 `support_status`、`reason`、`evidence_ids` 和 `suggested_revision`。
 - Agent4 不会引用已拦截的 Claim。
 - Agent3 的 `verified_evidence_package` 正确区分 `accepted_claims`、`qualified_claims` 和 `rejected_claims`。
 - Agent4 同时返回 `platform_report_json` 和 `markdown_report`，且 Markdown 五个标题完整、顺序固定。
-- 精确数量和比例只来自 Agent1 场景摘要，不来自 Agent2 自然语言。
+- Agent4 若需要精确数量和比例，必须由总控后端先把已经校验的 Agent1 统计转换并纳入 `verified_evidence_package`；不得直接从 Agent2 自然语言或 Agent1 原始文件读取。
 - 固定20条样本通过 `sample_id` 正确配对。
 - 前端可以预览并下载 Markdown 和 JSON。
 

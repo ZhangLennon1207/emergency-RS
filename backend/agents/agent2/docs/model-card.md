@@ -6,7 +6,8 @@
 - Adaptation: PEFT LoRA, rank 8, alpha 16, dropout 0.05, target modules `q_proj` and `v_proj`.
 - Inference: 4-bit NF4, double quantization, float16 compute, deterministic generation (`do_sample=false`).
 - Inputs: one pre-disaster image and one post-disaster image.
-- Output: one English change-description paragraph, always marked unverified.
+- Model output: one English change-description paragraph, always marked unverified.
+- Adapter output: the unchanged paragraph plus a deterministic `claim_list` (`sentence-span-v1`). This postprocessor does not retrain or re-prompt the model and does not claim semantic decomposition of every compound sentence.
 
 Neither the base model nor LoRA weights are stored in Git. Local weight record:
 
