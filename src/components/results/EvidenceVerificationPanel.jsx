@@ -10,7 +10,7 @@ const statusOrder = [
   ['exaggerated', '存在夸大'],
 ]
 
-function EvidenceVerificationPanel({ result, compact = false }) {
+function EvidenceVerificationPanel({ result, compact = false, pendingReason = '' }) {
   const [claimFilter, setClaimFilter] = useState('all')
 
   if (!result) {
@@ -20,7 +20,7 @@ function EvidenceVerificationPanel({ result, compact = false }) {
         <div>
           <span className="eyebrow">Agent3 · Evidence verification</span>
           <h2>等待证据校验结果</h2>
-          <p>Agent3 尚未返回正式结果。当前描述只能作为模型生成内容展示，不能进入可信结论。</p>
+          <p>{pendingReason || 'Agent3 尚未返回正式结果。当前描述只能作为模型生成内容展示，不能进入可信结论。'}</p>
         </div>
       </section>
     )

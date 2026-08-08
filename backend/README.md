@@ -48,6 +48,8 @@ python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --workers 1
 
 Agent3/4 的预备配置为 `AGENT34_BASE_URL`、`AGENT34_SHARED_TOKEN`、`AGENT34_CONNECT_TIMEOUT_SECONDS` 和 `AGENT34_READ_TIMEOUT_SECONDS`。配置这些变量只代表远程地址已填写；在 `evidence_list` 映射经真实样例验证、编排器正式接入并完成真实回归前，健康接口仍不得把 Agent3/4 声明为已集成。跨电脑细节见 `docs/agent34-http-integration-contract.md`。
 
+真实 Agent1/2 启动前先运行 `python backend/scripts/preflight_real_integration.py --env-file backend/.env`。模型文件准备、启动顺序和验收标准见 `docs/real-agent12-integration-runbook.md`。
+
 前端开发应以 `docs/frontend-backend-current-contract.md` 为当前可执行接口基线；
 该文档区分了已经由 FastAPI 实际返回的字段和仍处于待接入状态的 Agent3/4
 结果槽位。
@@ -56,9 +58,11 @@ Agent3/4 的预备配置为 `AGENT34_BASE_URL`、`AGENT34_SHARED_TOKEN`、`AGENT
 
 ```text
 POST /api/v1/jobs
+GET  /api/v1/jobs?page=1&page_size=20
 GET  /api/v1/jobs/{job_id}
 GET  /api/v1/jobs/{job_id}/result
 GET  /api/v1/jobs/{job_id}/artifacts/{artifact_key}
+GET  /api/v1/dashboard
 GET  /api/v1/health
 ```
 

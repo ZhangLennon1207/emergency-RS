@@ -69,3 +69,18 @@ test('双时相影像尺寸不一致时阻止提交', async ({ page }) => {
   await expect(page.getByText('两张影像尺寸必须一致')).toBeVisible()
   await expect(page.getByRole('button', { name: /提交模拟任务/ })).toBeDisabled()
 })
+
+test('场景编号包含非法字符时给出提示并阻止提交', async ({ page }) => {
+  await resetDemoData(page, '/#/tasks/new')
+
+  const sampleId = page.getByPlaceholder('例如：EARTHQUAKE-TURKEY-003679')
+  await sampleId.fill('长沙 灾情/001')
+
+  await expect(sampleId).toHaveAttribute('aria-invalid', 'true')
+  await expect(page.getByText('修正场景编号格式')).toBeVisible()
+  await expect(page.getByRole('button', { name: /提交模拟任务/ })).toBeDisabled()
+
+  await sampleId.fill('CHANGSHA-2026_001')
+  await expect(sampleId).toHaveAttribute('aria-invalid', 'false')
+  await expect(page.getByText('修正场景编号格式')).toHaveCount(0)
+})

@@ -80,6 +80,90 @@ def test_create_read_and_input_artifact(tmp_path: Path) -> None:
         assert artifact.headers["content-type"] == "image/png"
 
 
+def test_lists_jobs_as_paginated_public_summaries(tmp_path: Path) -> None:
+    settings = make_settings(tmp_path)
+    app = create_app(settings, start_worker=False)
+    with TestClient(app) as client:
+        for sample_id in ("sample-a", "sample-b"):
+            response = client.post(
+                "/api/v1/jobs",
+                files={
+                    "pre_image": ("pre.png", image_bytes(), "image/png"),
+                    "post_image": ("post.png", image_bytes(), "image/png"),
+                },
+                data={"sample_id": sample_id},
+            )
+            assert response.status_code == 202
+
+        first_page = client.get("/api/v1/jobs?page=1&page_size=1")
+        second_page = client.get("/api/v1/jobs?page=2&page_size=1")
+
+    assert first_page.status_code == 200
+    assert second_page.status_code == 200
+    assert first_page.json()["total"] == 2
+    assert first_page.json()["page_size"] == 1
+    assert len(first_page.json()["items"]) == 1
+    assert len(second_page.json()["items"]) == 1
+    listed_ids = {
+        first_page.json()["items"][0]["sample_id"],
+        second_page.json()["items"][0]["sample_id"],
+    }
+    assert listed_ids == {"sample-a", "sample-b"}
+    assert "result" not in first_page.json()["items"][0]
+    assert "pre_image_path" not in first_page.json()["items"][0]
+
+
+def test_dashboard_aggregates_sqlite_job_state(tmp_path: Path) -> None:
+    settings = make_settings(tmp_path)
+    app = create_app(settings, start_worker=False)
+    with TestClient(app) as client:
+        created_jobs = []
+        for sample_id in ("dashboard-a", "dashboard-b"):
+            response = client.post(
+                "/api/v1/jobs",
+                files={
+                    "pre_image": ("pre.png", image_bytes(), "image/png"),
+                    "post_image": ("post.png", image_bytes(), "image/png"),
+                },
+                data={"sample_id": sample_id},
+            )
+            created_jobs.append(response.json())
+
+        app.state.store.update_job(
+            created_jobs[0]["job_id"],
+            status="succeeded",
+            stage="当前双智能体范围执行成功",
+            progress=100,
+            completed_at=created_jobs[0]["created_at"],
+            result_json={
+                "scope": "agent1_agent2_local_only",
+                "four_agent_pipeline_complete": False,
+                "agent1": {
+                    "summary": {
+                        "scene_risk_level": "high",
+                        "review_required": True,
+                    }
+                },
+            },
+            errors_json=[],
+        )
+        response = client.get("/api/v1/dashboard")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["counts"] == {
+        "total": 2,
+        "active": 1,
+        "review_required": 1,
+        "succeeded": 1,
+        "partial_success": 0,
+        "failed": 0,
+    }
+    assert len(payload["trend"]) == 6
+    assert len(payload["recent_jobs"]) == 2
+    assert payload["recent_jobs"][0]["four_agent_pipeline_complete"] is False
+
+
 def test_rejects_mismatched_dimensions(tmp_path: Path) -> None:
     app = create_app(make_settings(tmp_path), start_worker=False)
     with TestClient(app) as client:

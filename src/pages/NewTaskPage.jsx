@@ -17,11 +17,19 @@ const disasterTypes = {
 }
 
 const supportedImageTypes = new Set(['image/png', 'image/jpeg'])
+const maxUploadBytes = 25 * 1024 * 1024
+const maxImagePixels = 100_000_000
+const sampleIdPattern = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/
 
 function inspectImage(file, previewUrl) {
   return new Promise((resolve, reject) => {
     const image = new Image()
     image.onload = () => {
+      const pixelCount = image.naturalWidth * image.naturalHeight
+      if (pixelCount > maxImagePixels) {
+        reject(new Error(`图片像素总数为 ${pixelCount.toLocaleString()}，超过后端允许的 100,000,000 像素。`))
+        return
+      }
       const maxPreviewSize = 480
       const scale = Math.min(1, maxPreviewSize / Math.max(image.naturalWidth, image.naturalHeight))
       const canvas = document.createElement('canvas')
@@ -73,6 +81,7 @@ function NewTaskPage() {
   const [imageMetadata, setImageMetadata] = useState({ preImage: null, postImage: null })
   const [form, setForm] = useState({
     name: '',
+    sampleId: '',
     disasterType: 'earthquake',
     location: '',
     preImage: null,
@@ -90,8 +99,9 @@ function NewTaskPage() {
     && imageMetadata.preImage.width === imageMetadata.postImage.width
     && imageMetadata.preImage.height === imageMetadata.postImage.height
   const missingRequirements = [
-    !form.name.trim() && '填写任务名称',
-    !form.location.trim() && '填写研判区域',
+    !isRealApiEnabled && !form.name.trim() && '填写任务名称',
+    !isRealApiEnabled && !form.location.trim() && '填写研判区域',
+    form.sampleId.trim() && !sampleIdPattern.test(form.sampleId.trim()) && '修正场景编号格式',
     !form.preImage && '选择灾前影像',
     !form.postImage && '选择灾后影像',
     form.preImage && !imageMetadata.preImage && !fileErrors.preImage && '等待灾前影像读取完成',
@@ -117,6 +127,15 @@ function NewTaskPage() {
       return
     }
 
+    if (file.size > maxUploadBytes) {
+      update(key, null)
+      setFileErrors((current) => ({
+        ...current,
+        [key]: `图片大小为 ${(file.size / 1024 / 1024).toFixed(2)} MB，超过后端允许的 25 MiB。`,
+      }))
+      return
+    }
+
     update(key, file)
     const previewUrl = URL.createObjectURL(file)
     previewUrls.current.add(previewUrl)
@@ -139,7 +158,7 @@ function NewTaskPage() {
     setSubmitError('')
     try {
       if (isRealApiEnabled) {
-        const job = await createBackendJob(form.preImage, form.postImage)
+        const job = await createBackendJob(form.preImage, form.postImage, form.sampleId)
         navigate(`/live-jobs/${job.job_id}`)
         return
       }
@@ -183,34 +202,53 @@ function NewTaskPage() {
         <section className="panel form-panel">
           <div className="section-title">
             <span>01</span>
-            <div><strong>任务信息</strong><small>用于标识本次应急研判</small></div>
+            <div><strong>{isRealApiEnabled ? '场景标识' : '任务信息'}</strong><small>用于标识本次应急研判</small></div>
           </div>
           <label className="form-field">
-            <span>任务名称</span>
+            <span>场景编号（可选）</span>
             <input
-              onChange={(event) => update('name', event.target.value)}
-              placeholder="例如：长沙县震后建筑损毁评估"
-              value={form.name}
+              aria-invalid={Boolean(form.sampleId.trim() && !sampleIdPattern.test(form.sampleId.trim()))}
+              onChange={(event) => update('sampleId', event.target.value)}
+              placeholder="例如：EARTHQUAKE-TURKEY-003679"
+              value={form.sampleId}
             />
+            <small>仅支持字母、数字、点、下划线和连字符；留空时由后端生成。</small>
           </label>
-          <div className="form-row">
-            <label className="form-field">
-              <span>灾害类型</span>
-              <select onChange={(event) => update('disasterType', event.target.value)} value={form.disasterType}>
-                {Object.entries(disasterTypes).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </select>
-            </label>
-            <label className="form-field">
-              <span>研判区域</span>
-              <input
-                onChange={(event) => update('location', event.target.value)}
-                placeholder="省 / 市 / 区县或坐标"
-                value={form.location}
-              />
-            </label>
-          </div>
+          {!isRealApiEnabled ? (
+            <>
+              <label className="form-field">
+                <span>任务名称</span>
+                <input
+                  onChange={(event) => update('name', event.target.value)}
+                  placeholder="例如：长沙县震后建筑损毁评估"
+                  value={form.name}
+                />
+              </label>
+              <div className="form-row">
+                <label className="form-field">
+                  <span>灾害类型</span>
+                  <select onChange={(event) => update('disasterType', event.target.value)} value={form.disasterType}>
+                    {Object.entries(disasterTypes).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="form-field">
+                  <span>研判区域</span>
+                  <input
+                    onChange={(event) => update('location', event.target.value)}
+                    placeholder="省 / 市 / 区县或坐标"
+                    value={form.location}
+                  />
+                </label>
+              </div>
+            </>
+          ) : (
+            <div className="upload-note">
+              <ImagePlus size={18} />
+              <span>当前真实接口只持久化场景编号和双时相影像；任务名称、灾害类型与区域将在后端契约扩展后加入。</span>
+            </div>
+          )}
         </section>
 
         <section className="panel form-panel">
@@ -237,7 +275,7 @@ function NewTaskPage() {
           <div className="upload-note">
             <ImagePlus size={18} />
             <span>{isRealApiEnabled
-              ? '提交前会检查图片格式、可解码性和双时相尺寸一致性。'
+              ? '提交前会检查格式、25 MiB 大小限制、1 亿像素限制和双时相尺寸一致性。'
               : 'Mock 模式仅保存文件名称；提交前仍会检查图片格式和双时相尺寸。'}</span>
           </div>
         </section>
