@@ -602,7 +602,10 @@
 
 .status-queued,
 .status-skipped,
-.status-not_integrated { color: #53657b; background: #edf2f7; }
+.status-not_integrated,
+.status-unknown { color: #53657b; background: #edf2f7; }
+
+.status-starting { color: #086ca7; background: #e7f5ff; }
 
 .filter-bar {
   display: flex;

@@ -49,6 +49,69 @@ Content-Type: multipart/form-data
 }
 ```
 
+### 2.1 读取真实任务列表
+
+```http
+GET /api/v1/jobs?page=1&page_size=20
+```
+
+`page` 从 1 开始，`page_size` 取值为 1～100。接口按创建时间倒序返回 SQLite
+中的任务摘要：
+
+```json
+{
+  "items": [
+    {
+      "job_id": "9f6...",
+      "sample_id": "case-001",
+      "status": "succeeded",
+      "stage": "当前双智能体范围执行成功",
+      "progress": 100,
+      "created_at": "2026-08-08T08:00:00+00:00",
+      "scope": "agent1_agent2_local_only",
+      "four_agent_pipeline_complete": false,
+      "scene_risk_level": "high",
+      "review_required": true
+    }
+  ],
+  "page": 1,
+  "page_size": 20,
+  "total": 1
+}
+```
+
+列表接口不返回本地图片路径或完整 `result`。前端点击真实任务后进入
+`/live-jobs/{job_id}`，再通过单任务接口读取详情。
+
+### 2.2 读取真实态势统计
+
+```http
+GET /api/v1/dashboard
+```
+
+接口返回 SQLite 全量任务的状态计数、最近 24 小时四小时分桶趋势和最近 4 条
+任务摘要。`counts.succeeded` 仅表示当前 Agent1+Agent2 范围成功；响应固定包含
+`four_agent_pipeline_complete=false`，前端不得将其显示为完整报告数量。
+
+主要字段：
+
+```json
+{
+  "scope": "agent1_agent2_local_only",
+  "four_agent_pipeline_complete": false,
+  "counts": {
+    "total": 12,
+    "active": 1,
+    "review_required": 2,
+    "succeeded": 8,
+    "partial_success": 1,
+    "failed": 2
+  },
+  "trend": [{"time": "08:00", "tasks": 2, "completed": 1}],
+  "recent_jobs": []
+}
+```
+
 ## 3. 任务状态与轮询
 
 ```http

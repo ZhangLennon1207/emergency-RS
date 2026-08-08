@@ -119,6 +119,31 @@ class JobStore:
             ).fetchone()
         return self._row_to_dict(row) if row else None
 
+    def list_jobs(self, *, limit: int, offset: int) -> tuple[list[dict[str, Any]], int]:
+        with self._connect() as connection:
+            total = int(connection.execute("SELECT COUNT(*) FROM jobs").fetchone()[0])
+            rows = connection.execute(
+                """
+                SELECT * FROM jobs
+                ORDER BY created_at DESC, job_id DESC
+                LIMIT ? OFFSET ?
+                """,
+                (limit, offset),
+            ).fetchall()
+        return [self._row_to_dict(row) for row in rows], total
+
+    def list_dashboard_jobs(self) -> list[dict[str, Any]]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT job_id, sample_id, status, stage, progress, created_at,
+                       updated_at, started_at, completed_at, result_json, errors_json
+                FROM jobs
+                ORDER BY created_at DESC, job_id DESC
+                """
+            ).fetchall()
+        return [self._row_to_dict(row) for row in rows]
+
     def claim_next_job(self) -> dict[str, Any] | None:
         now = utc_now()
         with self._connect() as connection:

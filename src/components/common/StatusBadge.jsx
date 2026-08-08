@@ -1,6 +1,7 @@
 const labels = {
   pending: '等待中',
   queued: '排队中',
+  starting: '准备中',
   running: '运行中',
   running_agent1: 'Agent1 分析中',
   running_agent2: 'Agent2 描述中',
@@ -25,6 +26,7 @@ const labels = {
   medium: '中风险',
   high: '高风险',
   critical: '极高风险',
+  unknown: '待生成',
 }
 
 function StatusBadge({ value }) {

@@ -5,10 +5,11 @@ import mimetypes
 import re
 import uuid
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from PIL import Image, ImageOps, UnidentifiedImageError
@@ -22,6 +23,9 @@ from backend.app.orchestration import JobOrchestrator
 ALLOWED_CONTENT_TYPES = {"image/png", "image/jpeg"}
 ALLOWED_FORMATS = {"PNG", "JPEG"}
 SAMPLE_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+ACTIVE_JOB_STATUSES = {
+    "queued", "starting", "running_agent1", "running_agent2", "assembling"
+}
 
 
 def api_error(status_code: int, code: str, message: str) -> HTTPException:
@@ -75,6 +79,62 @@ def _public_job(job: dict[str, Any], settings: Settings) -> dict[str, Any]:
     }
 
 
+def _public_job_summary(job: dict[str, Any], settings: Settings) -> dict[str, Any]:
+    result = job.get("result") or {}
+    summary = (result.get("agent1") or {}).get("summary") or {}
+    return {
+        "job_id": job["job_id"],
+        "sample_id": job["sample_id"],
+        "contract_version": settings.contract_version,
+        "pipeline_version": settings.pipeline_version,
+        "status": job["status"],
+        "stage": job["stage"],
+        "progress": job["progress"],
+        "created_at": job["created_at"],
+        "updated_at": job["updated_at"],
+        "completed_at": job["completed_at"],
+        "scope": result.get("scope", "agent1_agent2_local_only"),
+        "four_agent_pipeline_complete": bool(
+            result.get("four_agent_pipeline_complete", False)
+        ),
+        "scene_risk_level": summary.get("scene_risk_level"),
+        "review_required": bool(summary.get("review_required", False)),
+    }
+
+
+def _parse_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+
+
+def _dashboard_trend(jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    bucket_hours = 4
+    bucket_count = 6
+    current_hour = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    first_bucket = current_hour - timedelta(hours=bucket_hours * (bucket_count - 1))
+    trend: list[dict[str, Any]] = []
+
+    for index in range(bucket_count):
+        start = first_bucket + timedelta(hours=bucket_hours * index)
+        end = start + timedelta(hours=bucket_hours)
+        created = 0
+        completed = 0
+        for job in jobs:
+            created_at = _parse_datetime(job.get("created_at"))
+            completed_at = _parse_datetime(job.get("completed_at"))
+            if created_at and start <= created_at < end:
+                created += 1
+            if completed_at and start <= completed_at < end:
+                completed += 1
+        trend.append({"time": start.strftime("%H:%M"), "tasks": created, "completed": completed})
+    return trend
+
+
 def create_app(settings: Settings | None = None, *, start_worker: bool = True) -> FastAPI:
     current_settings = settings or Settings.from_env()
     store = JobStore(current_settings.database_path)
@@ -120,6 +180,37 @@ def create_app(settings: Settings | None = None, *, start_worker: bool = True) -
     def health() -> dict[str, Any]:
         return orchestrator.health()
 
+    @app.get("/api/v1/dashboard")
+    def dashboard() -> dict[str, Any]:
+        jobs = store.list_dashboard_jobs()
+        review_required = sum(
+            1
+            for job in jobs
+            if bool(
+                (((job.get("result") or {}).get("agent1") or {}).get("summary") or {}).get(
+                    "review_required", False
+                )
+            )
+        )
+        return {
+            "scope": "agent1_agent2_local_only",
+            "four_agent_pipeline_complete": False,
+            "counts": {
+                "total": len(jobs),
+                "active": sum(1 for job in jobs if job["status"] in ACTIVE_JOB_STATUSES),
+                "review_required": review_required,
+                "succeeded": sum(1 for job in jobs if job["status"] == "succeeded"),
+                "partial_success": sum(
+                    1 for job in jobs if job["status"] == "partial_success"
+                ),
+                "failed": sum(1 for job in jobs if job["status"] == "failed"),
+            },
+            "trend": _dashboard_trend(jobs),
+            "recent_jobs": [
+                _public_job_summary(job, current_settings) for job in jobs[:4]
+            ],
+        }
+
     @app.post("/api/v1/jobs", status_code=202)
     async def create_job(
         pre_image: UploadFile = File(...),
@@ -161,6 +252,22 @@ def create_app(settings: Settings | None = None, *, start_worker: bool = True) -
         body = _public_job(job, current_settings)
         body["status_url"] = f"/api/v1/jobs/{job_id}"
         return JSONResponse(status_code=202, content=body)
+
+    @app.get("/api/v1/jobs")
+    def list_jobs(
+        page: int = Query(default=1, ge=1),
+        page_size: int = Query(default=20, ge=1, le=100),
+    ) -> dict[str, Any]:
+        jobs, total = store.list_jobs(
+            limit=page_size,
+            offset=(page - 1) * page_size,
+        )
+        return {
+            "items": [_public_job_summary(job, current_settings) for job in jobs],
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+        }
 
     @app.get("/api/v1/jobs/{job_id}")
     def get_job(job_id: str) -> dict[str, Any]:
