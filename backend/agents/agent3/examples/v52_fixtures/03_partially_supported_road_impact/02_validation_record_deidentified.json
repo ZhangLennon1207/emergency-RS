@@ -1,0 +1,11 @@
+{
+  "instruction": "<image>\n<image>\n<image>\n<image>\nImages are supplied in the exact order listed in image_order. Verify only the atomic claim. Use both structured and visual evidence. Be conservative when evidence confidence is low or evidence is conflicting. Do not use filenames, disaster names, or external knowledge as evidence.",
+  "input": "{\"scene_uid\":\"SCENE_FIXTURE_03\",\"claim_id\":\"C900003\",\"atomic_claim\":\"The roads are completely unaffected.\",\"claim_type\":\"road_impact\",\"evidence_summary\":{\"evidence_id\":\"R0001\",\"total_road_pixels\":8967,\"affected_road_pixels\":2882,\"affected_road_ratio\":0.321401,\"is_affected\":true,\"affected_presence_confidence\":0.86213,\"affected_presence_confidence_level\":\"high\",\"road_impact_level\":\"medium\",\"confidence_is_calibrated\":false,\"interpretation_note\":\"红色道路表示疑似受灾影响或存在通行受阻风险，不等同于已经确认的结构性道路损毁。\"},\"image_order\":[\"pre_image\",\"post_image\",\"road_status_map\",\"fused_overlay\"],\"confidence_policy\":\"All Agent1 confidence values are model outputs and are not calibrated probabilities.\",\"evidence_id_legend\":{\"VIS_PRE_POST\":\"paired pre-disaster and post-disaster original imagery\",\"VIS_FUSED_OVERLAY\":\"Agent1 fused multimodal visualization / overlay\",\"VIS_DAMAGE_MAP\":\"Agent1 building-damage visualization\",\"VIS_ROAD_STATUS_MAP\":\"Agent1 road-status visualization\",\"SCENE_BUILDING_SUMMARY\":\"Agent1 scene-level structured building statistics\"}}",
+  "system": "You are Agent3, an evidence-verification agent for paired pre/post-disaster remote-sensing imagery. Verify exactly one atomic claim against the supplied structured and visual evidence. Do not infer facts outside the evidence. Model confidence values are uncalibrated and must not be treated as true probabilities. Use exactly one support_status from: supported, partially_supported, unsupported, contradicted, exaggerated. Return strict JSON only.",
+  "images": [
+    "fixtures/assets/SCENE_FIXTURE_03/pre_image.png",
+    "fixtures/assets/SCENE_FIXTURE_03/post_image.png",
+    "fixtures/assets/SCENE_FIXTURE_03/road_status_color.png",
+    "fixtures/assets/SCENE_FIXTURE_03/fused_overlay.png"
+  ]
+}

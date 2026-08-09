@@ -1,1 +1,8 @@
-# Agent4成员填写本模块额外依赖，不要提交模型权重。
+torch==2.5.1+cu124
+transformers==4.57.1
+peft==0.17.1
+accelerate==1.11.0
+bitsandbytes==0.50.0
+jsonschema==4.23.0
+python-docx==1.2.0
+Pillow==12.3.0

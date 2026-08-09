@@ -1,0 +1,22 @@
+{
+  "agent": "Agent3",
+  "version": "Agent3-V5.2",
+  "capability": "evidence_verification",
+  "base_model": "Qwen2.5-VL-7B-Instruct",
+  "lora_filename": "adapter_model.safetensors",
+  "lora_directory": "agent3_v52_targeted_best",
+  "lora_size_bytes": 20218120,
+  "lora_sha256": "77027dc79afdfb0c97cc9dbce4e8a34ad52ab57ade678925659a890e878bfc76",
+  "lora_config": {
+    "r": 8,
+    "alpha": 16,
+    "dropout": 0.05,
+    "target_modules": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj"
+    ]
+  },
+  "weights_in_package": false
+}

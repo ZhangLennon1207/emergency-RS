@@ -1,0 +1,10 @@
+{
+  "claim_id": "C900003",
+  "claim": "The roads are completely unaffected.",
+  "language": "en",
+  "claim_type": "road_impact",
+  "gold_support_status": "contradicted",
+  "predicted_support_status": "partially_supported",
+  "scene_uid": "SCENE_FIXTURE_03",
+  "deidentified": true
+}

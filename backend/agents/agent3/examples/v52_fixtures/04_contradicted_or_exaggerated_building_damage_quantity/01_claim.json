@@ -1,0 +1,10 @@
+{
+  "claim_id": "C900004",
+  "claim": "The scene contains many damaged buildings.",
+  "language": "en",
+  "claim_type": "building_damage_quantity",
+  "gold_support_status": "contradicted",
+  "predicted_support_status": "unsupported",
+  "scene_uid": "SCENE_FIXTURE_04",
+  "deidentified": true
+}

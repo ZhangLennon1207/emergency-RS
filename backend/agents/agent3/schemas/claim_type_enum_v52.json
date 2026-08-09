@@ -1,0 +1,96 @@
+{
+  "schema_version": "agent3_v52_claim_type_registry_v1",
+  "agent": "Agent3-V5.2",
+  "capability": "evidence_verification",
+  "claim_type_enum": [
+    "agricultural_change",
+    "building_damage_level",
+    "building_damage_presence",
+    "building_damage_quantity",
+    "disaster_type_inference",
+    "generic_visual_change",
+    "other",
+    "road_displacement",
+    "road_impact",
+    "terrain_change",
+    "vegetation_change",
+    "water_change"
+  ],
+  "claim_type_count": 12,
+  "counts_total": {
+    "agricultural_change": 19,
+    "building_damage_level": 430,
+    "building_damage_presence": 270,
+    "building_damage_quantity": 53,
+    "disaster_type_inference": 56,
+    "generic_visual_change": 9,
+    "other": 1,
+    "road_displacement": 26,
+    "road_impact": 87,
+    "terrain_change": 16,
+    "vegetation_change": 43,
+    "water_change": 18
+  },
+  "counts_by_split": {
+    "train": {
+      "path_basename": "train_final_balanced.json",
+      "sample_count": 566,
+      "claim_type_counts": {
+        "agricultural_change": 15,
+        "building_damage_level": 223,
+        "building_damage_presence": 128,
+        "building_damage_quantity": 32,
+        "disaster_type_inference": 35,
+        "generic_visual_change": 3,
+        "other": 1,
+        "road_displacement": 18,
+        "road_impact": 56,
+        "terrain_change": 14,
+        "vegetation_change": 30,
+        "water_change": 11
+      },
+      "missing_claim_type_count": 0
+    },
+    "validation": {
+      "path_basename": "val_final.json",
+      "sample_count": 177,
+      "claim_type_counts": {
+        "agricultural_change": 2,
+        "building_damage_level": 71,
+        "building_damage_presence": 48,
+        "building_damage_quantity": 10,
+        "disaster_type_inference": 11,
+        "generic_visual_change": 4,
+        "road_displacement": 4,
+        "road_impact": 14,
+        "terrain_change": 1,
+        "vegetation_change": 9,
+        "water_change": 3
+      },
+      "missing_claim_type_count": 0
+    },
+    "test": {
+      "path_basename": "test_final.json",
+      "sample_count": 285,
+      "claim_type_counts": {
+        "agricultural_change": 2,
+        "building_damage_level": 136,
+        "building_damage_presence": 94,
+        "building_damage_quantity": 11,
+        "disaster_type_inference": 10,
+        "generic_visual_change": 2,
+        "road_displacement": 4,
+        "road_impact": 17,
+        "terrain_change": 1,
+        "vegetation_change": 4,
+        "water_change": 4
+      },
+      "missing_claim_type_count": 0
+    }
+  },
+  "first_unresolved_indices": {
+    "train": [],
+    "validation": [],
+    "test": []
+  }
+}

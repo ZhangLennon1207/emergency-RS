@@ -1,0 +1,68 @@
+{
+  "runtime_schema_version": "3.1-runtime",
+  "scene_uid": "SCENE_FIXTURE_05",
+  "claim_id": "C900005",
+  "first_check": {
+    "schema_version": "3.1",
+    "scene_uid": "SCENE_FIXTURE_05",
+    "claim_id": "C900005",
+    "claim_type": "disaster_type_inference",
+    "support_status": "unsupported",
+    "evidence_ids": [
+      "VIS_PRE_POST"
+    ],
+    "reason": "The supplied evidence proves nothing about the exact disaster cause.",
+    "suggested_revision": "No conclusion about the exact disaster cause can be drawn from the supplied evidence.",
+    "second_check": {
+      "required": false,
+      "trigger_reasons": [],
+      "recommended_inputs": [],
+      "recommended_next_step": ""
+    },
+    "human_review_state": "unreviewed"
+  },
+  "crop_check": null,
+  "final_check": {
+    "schema_version": "3.1",
+    "scene_uid": "SCENE_FIXTURE_05",
+    "claim_id": "C900005",
+    "claim_type": "disaster_type_inference",
+    "support_status": "unsupported",
+    "evidence_ids": [
+      "VIS_PRE_POST"
+    ],
+    "reason": "The supplied evidence proves nothing about the exact disaster cause.",
+    "suggested_revision": "No conclusion about the exact disaster cause can be drawn from the supplied evidence.",
+    "second_check": {
+      "required": false,
+      "trigger_reasons": [],
+      "recommended_inputs": [],
+      "recommended_next_step": ""
+    },
+    "human_review_state": "unreviewed"
+  },
+  "resolution_state": "finalized",
+  "human_review_required": false,
+  "audit": {
+    "trigger_reasons": [],
+    "recommended_inputs": [
+      "pre_image",
+      "post_image",
+      "fused_overlay",
+      "damage_map",
+      "road_status_map"
+    ],
+    "recommended_next_step": "finalize_first_check",
+    "crop_region": null,
+    "model_version": "Agent3-V5.2",
+    "created_at": "<RUNTIME_TIMESTAMP>",
+    "second_pass_auto_built": false
+  },
+  "generation_quality": {
+    "fixture_source": "actual_v52_validation_first_check_deidentified",
+    "first_check_strict_json": true,
+    "first_check_schema_exact": true,
+    "retry_used": false,
+    "parse_failure": false
+  }
+}

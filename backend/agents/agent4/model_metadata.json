@@ -1,0 +1,11 @@
+{
+  "agent": "Agent4",
+  "version": "Agent4-V3",
+  "capability": "report_generation",
+  "architecture": "skeleton_plus_slot_filling",
+  "base_model": "Qwen2.5-7B-Instruct",
+  "lora_filename": "adapter_model.safetensors",
+  "lora_size_bytes": 161533192,
+  "lora_sha256": "0fbd50a4dbedc698d1a813f3adab2ed202c1e12402a962c2cbacfbeb6294e894",
+  "weights_in_package": false
+}

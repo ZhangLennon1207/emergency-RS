@@ -1,0 +1,19 @@
+{
+  "schema_version": "3.1",
+  "scene_uid": "SCENE_FIXTURE_04",
+  "claim_id": "C900004",
+  "claim_type": "building_damage_quantity",
+  "support_status": "unsupported",
+  "evidence_ids": [
+    "VIS_PRE_POST"
+  ],
+  "reason": "The pre/post imagery contains no visible damaged buildings.",
+  "suggested_revision": "The scene contains no visible damaged buildings.",
+  "second_check": {
+    "required": false,
+    "trigger_reasons": [],
+    "recommended_inputs": [],
+    "recommended_next_step": ""
+  },
+  "human_review_state": "unreviewed"
+}

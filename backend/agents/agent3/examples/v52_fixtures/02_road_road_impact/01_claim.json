@@ -1,0 +1,10 @@
+{
+  "claim_id": "C900002",
+  "claim": "The road evidence shows suspected disaster impact or possible access-obstruction risk.",
+  "language": "en",
+  "claim_type": "road_impact",
+  "gold_support_status": "supported",
+  "predicted_support_status": "supported",
+  "scene_uid": "SCENE_FIXTURE_02",
+  "deidentified": true
+}

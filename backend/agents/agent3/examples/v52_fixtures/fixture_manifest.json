@@ -1,0 +1,62 @@
+[
+  {
+    "fixture": "01_building_building_damage_quantity",
+    "scene_uid": "SCENE_FIXTURE_01",
+    "claim_id": "C900001",
+    "claim_type": "building_damage_quantity",
+    "gold_status": "supported",
+    "actual_v52_first_check_status": "supported",
+    "runtime_resolution_without_second_pass": "finalized",
+    "second_check_required_by_runtime_policy": false,
+    "second_pass_request_template_included": false,
+    "deidentified": true
+  },
+  {
+    "fixture": "02_road_road_impact",
+    "scene_uid": "SCENE_FIXTURE_02",
+    "claim_id": "C900002",
+    "claim_type": "road_impact",
+    "gold_status": "supported",
+    "actual_v52_first_check_status": "supported",
+    "runtime_resolution_without_second_pass": "second_check_required",
+    "second_check_required_by_runtime_policy": true,
+    "second_pass_request_template_included": true,
+    "deidentified": true
+  },
+  {
+    "fixture": "03_partially_supported_road_impact",
+    "scene_uid": "SCENE_FIXTURE_03",
+    "claim_id": "C900003",
+    "claim_type": "road_impact",
+    "gold_status": "contradicted",
+    "actual_v52_first_check_status": "partially_supported",
+    "runtime_resolution_without_second_pass": "second_check_required",
+    "second_check_required_by_runtime_policy": true,
+    "second_pass_request_template_included": true,
+    "deidentified": true
+  },
+  {
+    "fixture": "04_contradicted_or_exaggerated_building_damage_quantity",
+    "scene_uid": "SCENE_FIXTURE_04",
+    "claim_id": "C900004",
+    "claim_type": "building_damage_quantity",
+    "gold_status": "contradicted",
+    "actual_v52_first_check_status": "unsupported",
+    "runtime_resolution_without_second_pass": "finalized",
+    "second_check_required_by_runtime_policy": false,
+    "second_pass_request_template_included": false,
+    "deidentified": true
+  },
+  {
+    "fixture": "05_unsupported_or_other_disaster_type_inference",
+    "scene_uid": "SCENE_FIXTURE_05",
+    "claim_id": "C900005",
+    "claim_type": "disaster_type_inference",
+    "gold_status": "unsupported",
+    "actual_v52_first_check_status": "unsupported",
+    "runtime_resolution_without_second_pass": "finalized",
+    "second_check_required_by_runtime_policy": false,
+    "second_pass_request_template_included": false,
+    "deidentified": true
+  }
+]

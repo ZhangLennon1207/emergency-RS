@@ -1,0 +1,58 @@
+{
+  "runtime_schema_version": "3.1-runtime",
+  "scene_uid": "SCENE_FIXTURE_02",
+  "claim_id": "C900002",
+  "first_check": {
+    "schema_version": "3.1",
+    "scene_uid": "SCENE_FIXTURE_02",
+    "claim_id": "C900002",
+    "claim_type": "road_impact",
+    "support_status": "supported",
+    "evidence_ids": [
+      "R0001"
+    ],
+    "reason": "The affected presence confidence and road-level impact level are marked for the road segment.",
+    "suggested_revision": "The road evidence shows suspected disaster impact or possible access-obstruction risk.",
+    "second_check": {
+      "required": true,
+      "trigger_reasons": [
+        "first_check-supported"
+      ],
+      "recommended_inputs": [
+        "pre_image",
+        "post_image",
+        "road_status_map",
+        "fused_overlay"
+      ],
+      "recommended_next_step": "localize the claim-relevant region and run crop-level verification when a reliable bbox or evidence region is available"
+    },
+    "human_review_state": "unreviewed"
+  },
+  "crop_check": null,
+  "final_check": null,
+  "resolution_state": "second_check_required",
+  "human_review_required": false,
+  "audit": {
+    "trigger_reasons": [
+      "model_requested_second_check"
+    ],
+    "recommended_inputs": [
+      "pre_crop",
+      "post_crop",
+      "road_status_map_crop",
+      "fused_overlay_crop"
+    ],
+    "recommended_next_step": "run_localized_second_check",
+    "crop_region": null,
+    "model_version": "Agent3-V5.2",
+    "created_at": "<RUNTIME_TIMESTAMP>",
+    "second_pass_auto_built": false
+  },
+  "generation_quality": {
+    "fixture_source": "actual_v52_validation_first_check_deidentified",
+    "first_check_strict_json": true,
+    "first_check_schema_exact": true,
+    "retry_used": false,
+    "parse_failure": false
+  }
+}
