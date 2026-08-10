@@ -1,4 +1,4 @@
-# Agent1：时空视觉证据感知
+# Agent1：视觉感知智能体（Visual Perception Agent）
 
 负责人：`AutigerBai`。本目录包含 Agent1 最终四模型流水线、可复现训练/评估源码和统一 adapter；不包含数据集、模型权重或运行输出。
 

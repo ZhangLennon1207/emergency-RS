@@ -157,7 +157,7 @@ def create_app(settings: Settings | None = None, *, start_worker: bool = True) -
         orchestrator.stop()
 
     app = FastAPI(
-        title="Emergency RS Multi-Agent Integration API",
+        title="JianWei Multi-Agent Integration API",
         version="1.0.0",
         lifespan=lifespan,
     )
@@ -175,7 +175,10 @@ def create_app(settings: Settings | None = None, *, start_worker: bool = True) -
     @app.get("/")
     def service_info() -> dict[str, Any]:
         return {
-            "service": "Emergency RS Multi-Agent Integration API",
+            "service": "JianWei Multi-Agent Integration API",
+            "system_name": "鉴微",
+            "system_name_en": "JianWei",
+            "validated_scope": "bi_temporal_remote_sensing_disaster_assessment",
             "docs": "/docs",
             "health": "/api/v1/health",
             "pipeline_scope": (

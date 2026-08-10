@@ -137,16 +137,30 @@ class Settings:
         ) and _configured_path(self.agent2_config.get("lora_path"), directory=True)
         agent34_ready = self.agent34_configured
         return {
-            "agent1": {"configured": agent1_ready, "mode": "local_adapter"},
-            "agent2": {"configured": agent2_ready, "mode": "local_adapter"},
+            "agent1": {
+                "configured": agent1_ready,
+                "mode": "local_adapter",
+                "display_name": "视觉感知智能体",
+                "display_name_en": "Visual Perception Agent",
+            },
+            "agent2": {
+                "configured": agent2_ready,
+                "mode": "local_adapter",
+                "display_name": "变化理解智能体",
+                "display_name_en": "Change Understanding Agent",
+            },
             "agent3": {
                 "configured": agent34_ready,
                 "remote_service_configured": agent34_ready,
                 "mode": "remote_service" if agent34_ready else "not_configured",
+                "display_name": "证据约束核验智能体",
+                "display_name_en": "Evidence-Grounded Verification Agent",
             },
             "agent4": {
                 "configured": agent34_ready,
                 "remote_service_configured": agent34_ready,
                 "mode": "remote_service" if agent34_ready else "not_configured",
+                "display_name": "报告生成智能体",
+                "display_name_en": "Report Generation Agent",
             },
         }

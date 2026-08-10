@@ -41,8 +41,8 @@ function AppShell() {
             <Siren size={20} />
           </div>
           <div className="brand-copy">
-            <span>Emergency RS</span>
-            <strong>可信遥感研判平台</strong>
+            <span>JianWei · 鉴微</span>
+            <strong>证据驱动多智能体评估系统</strong>
           </div>
         </div>
 
@@ -94,8 +94,8 @@ function AppShell() {
       <div className="workspace">
         <header className="topbar">
           <div>
-            <span className="eyebrow">Multi-agent damage assessment</span>
-            <strong>可信遥感损毁评估与应急研判多智能体系统</strong>
+            <span className="eyebrow">Evidence-grounded multi-agent assessment</span>
+            <strong>鉴微 · 双时相遥感灾情评估</strong>
           </div>
           <div className={`system-state ${isRealApiEnabled ? 'state-online' : 'state-mock'}`}>
             <i />

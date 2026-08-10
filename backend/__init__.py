@@ -1,1 +1,1 @@
-"""Emergency RS backend package."""
+"""JianWei multi-agent assessment backend package."""
