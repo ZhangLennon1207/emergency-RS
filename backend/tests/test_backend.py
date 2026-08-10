@@ -54,6 +54,29 @@ def create_store_job(
     )
 
 
+def test_service_and_capabilities_use_frozen_jianwei_names(tmp_path: Path) -> None:
+    settings = make_settings(tmp_path)
+    app = create_app(settings, start_worker=False)
+    with TestClient(app) as client:
+        service = client.get("/").json()
+        assert service["service"] == "JianWei Multi-Agent Integration API"
+        assert service["system_name"] == "鉴微"
+        assert service["system_name_en"] == "JianWei"
+        assert (
+            service["validated_scope"]
+            == "bi_temporal_remote_sensing_disaster_assessment"
+        )
+
+        capabilities = client.get("/api/v1/health").json()["capabilities"]
+        assert capabilities["agent1"]["display_name"] == "视觉感知智能体"
+        assert capabilities["agent2"]["display_name"] == "变化理解智能体"
+        assert capabilities["agent3"]["display_name"] == "证据约束核验智能体"
+        assert capabilities["agent4"]["display_name"] == "报告生成智能体"
+        assert capabilities["agent3"]["display_name_en"] == (
+            "Evidence-Grounded Verification Agent"
+        )
+
+
 def test_create_read_and_input_artifact(tmp_path: Path) -> None:
     settings = make_settings(tmp_path)
     app = create_app(settings, start_worker=False)

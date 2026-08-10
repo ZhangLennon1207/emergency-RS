@@ -1,4 +1,4 @@
-# Agent2：灾前—灾后变化描述
+# Agent2：变化理解智能体（Change Understanding Agent）
 
 负责人：`AutigerBai`。本目录交付 Qwen2.5-VL + LoRA 的微调后推理、正式提示词、固定样本评估和配对消融分析源码；不包含基础模型、LoRA 权重、数据集、逐样本输出或模型 offload 文件。
 

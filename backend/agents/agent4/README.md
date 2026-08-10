@@ -1,4 +1,4 @@
-# Agent4：可信灾情报告生成
+# Agent4：报告生成智能体（Report Generation Agent）
 
 当前Agent4对应历史交接版本 `Agent5-V2`。负责人将可信证据包转报告、格式归一化和导出代码提交到本目录。
 

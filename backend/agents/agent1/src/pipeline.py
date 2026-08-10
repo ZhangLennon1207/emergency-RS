@@ -2,7 +2,7 @@
 """
 31_agent1_pipeline.py
 
-Agent1：时空视觉证据感知与证据账本生成智能体
+Agent1：视觉感知智能体（Visual Perception Agent）
 
 输入：
     灾前图像 + 灾后图像 + sample_id
@@ -2173,7 +2173,7 @@ class Agent1Pipeline:
                     "agent1",
 
                 "agent_name":
-                    "时空视觉证据感知与证据账本生成智能体",
+                    "视觉感知智能体",
             },
 
             "sample_id":

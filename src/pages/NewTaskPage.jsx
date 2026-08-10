@@ -284,10 +284,10 @@ function NewTaskPage() {
           <span className="eyebrow">Agent pipeline</span>
           <h2>{isRealApiEnabled ? '提交至真实后端' : '提交后将模拟执行'}</h2>
           <ol>
-            <li>Agent1 视觉证据、量化指标与复核标志</li>
-            <li>Agent2 英文变化描述</li>
-            <li>Agent3 证据可信校验</li>
-            <li>Agent4 可信报告生成</li>
+            <li>Agent1 视觉感知智能体：视觉证据、量化指标与复核标志</li>
+            <li>Agent2 变化理解智能体：英文变化描述与 Claim 构建</li>
+            <li>Agent3 证据约束核验智能体：逐条 Claim 核验</li>
+            <li>Agent4 报告生成智能体：结构化与双语报告生成</li>
           </ol>
           {!canSubmit ? (
             <div className="submit-requirements" role="status">

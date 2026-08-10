@@ -1,10 +1,10 @@
 const STORAGE_KEY = 'emergency-rs-demo-tasks'
 
 export const agentDefinitions = [
-  { id: 'agent1', name: '时空视觉证据感知', shortName: '视觉感知' },
-  { id: 'agent2', name: '灾情变化描述生成', shortName: '描述生成' },
-  { id: 'agent3', name: '证据可信校验', shortName: '证据校验' },
-  { id: 'agent4', name: '可信灾情报告生成', shortName: '报告生成' },
+  { id: 'agent1', name: '视觉感知智能体', shortName: '视觉感知' },
+  { id: 'agent2', name: '变化理解智能体', shortName: '变化理解' },
+  { id: 'agent3', name: '证据约束核验智能体', shortName: '证据核验' },
+  { id: 'agent4', name: '报告生成智能体', shortName: '报告生成' },
 ]
 
 const damageLevels = [

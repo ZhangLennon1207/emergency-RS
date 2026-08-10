@@ -23,10 +23,10 @@ const stageLabels = {
 }
 
 const agentDefinitions = [
-  { agent_code: 'agent1', display_name: '时空视觉证据感知' },
-  { agent_code: 'agent2', display_name: '灾情变化描述生成' },
-  { agent_code: 'agent3', display_name: '证据可信校验' },
-  { agent_code: 'agent4', display_name: '可信报告生成' },
+  { agent_code: 'agent1', display_name: '视觉感知智能体' },
+  { agent_code: 'agent2', display_name: '变化理解智能体' },
+  { agent_code: 'agent3', display_name: '证据约束核验智能体' },
+  { agent_code: 'agent4', display_name: '报告生成智能体' },
 ]
 
 function inferredRun(job, definition) {
