@@ -308,8 +308,8 @@ E:\遥感大创\pair_ablation_ebdtest20_seed20260728(1)\pair_ablation_ebdtest20_
 
 - Agent1 推理源代码
 - Agent2 推理源代码
-- 当前 Agent3（源版本 Agent4-V4）的完整后端包和实际任务输出
-- 当前 Agent4（源版本 Agent5-V2）的完整后端包和实际任务输出
+- 当前 Agent3-V5.2 的完整后端包和实际任务输出
+- 当前 Agent4-V3 的完整后端包和实际任务输出
 - PyTorch 模型权重
 - FastAPI 后端实现
 - PostgreSQL 数据库迁移
@@ -328,16 +328,16 @@ E:\遥感大创\frontend_codex_handoff_agent4_agent5_json
 
 已提供：
 
-- Agent4-V4 证据校验格式、五类 `support_status` 和评估摘要。
+- Agent3-V5.2 证据校验格式、五类 `support_status` 和评估摘要。
 - `check_result` 与 `verified_evidence_package` 字段规范。
-- Agent5-V2 的 `platform_report_json` 和固定五段式 Markdown 规范。
+- Agent4-V3 的 `platform_report_json` 和中英文 Markdown 规范。
 - 报告安全边界、前端卡片和排除项展示规则。
 
 在当前四智能体流水线中映射为：
 
 ```text
-当前 Agent3 evidence_verification ← 源版本 Agent4-V4
-当前 Agent4 report_generation     ← 源版本 Agent5-V2
+当前 Agent3 evidence_verification ← Agent3-V5.2
+当前 Agent4 report_generation     ← Agent4-V3
 ```
 
 这批文件属于格式规范，不是某个真实任务的 Agent3/4 输出。因此首套真实 Mock 中的 `verification` 和 `report` 仍保持 `null`，不得把规范示例伪装成模型运行结果。

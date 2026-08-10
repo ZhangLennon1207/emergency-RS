@@ -630,9 +630,9 @@ POST   /api/v1/tasks/{task_id}/retry
 
 ```text
 Agent2 英文描述/claim_list + Agent1 客观证据
-→ Agent3（源版本 Agent4-V4）根据 evidence_list 和 claim_list 逐条校验
+→ Agent3-V5.2 根据 evidence_list 和 claim_list 逐条校验
 → Agent3 生成 check_result 和 verified_evidence_package
-→ Agent4（源版本 Agent5-V2）仅读取 verified_evidence_package
+→ Agent4-V3 仅读取 verified_evidence_package
 → Agent4 生成 platform_report_json 和固定五段式中文 Markdown 报告
 ```
 
@@ -656,8 +656,8 @@ Agent2 英文描述/claim_list + Agent1 客观证据
 - Agent3 只校验传入 Claims，不在模型内部再次拆分。
 - 每条 Claim 都有 `support_status`、`reason`、`evidence_ids` 和 `suggested_revision`。
 - Agent4 不会引用已拦截的 Claim。
-- Agent3 的 `verified_evidence_package` 正确区分 `accepted_claims`、`qualified_claims` 和 `rejected_claims`。
-- Agent4 同时返回 `platform_report_json` 和 `markdown_report`，且 Markdown 五个标题完整、顺序固定。
+- Agent3 的 `verified_evidence_package` 正确区分 `accepted_claims`、`revised_claims`、`rejected_claims` 和 `pending_claims`。
+- Agent4 同时返回 `platform_report_json`、`markdown_report_zh` 和 `markdown_report_en`，且双语报告语义章节完整。
 - Agent4 若需要精确数量和比例，必须由总控后端先把已经校验的 Agent1 统计转换并纳入 `verified_evidence_package`；不得直接从 Agent2 自然语言或 Agent1 原始文件读取。
 - 固定20条样本通过 `sample_id` 正确配对。
 - 前端可以预览并下载 Markdown 和 JSON。

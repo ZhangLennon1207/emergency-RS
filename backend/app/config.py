@@ -114,6 +114,18 @@ class Settings:
         self.runtime_root.mkdir(parents=True, exist_ok=True)
         (self.runtime_root / "jobs").mkdir(parents=True, exist_ok=True)
 
+    @property
+    def agent34_configured(self) -> bool:
+        return bool(self.agent34_base_url and self.agent34_shared_token)
+
+    @property
+    def effective_pipeline_version(self) -> str:
+        return (
+            "competition-four-agent-v1"
+            if self.agent34_configured
+            else self.pipeline_version
+        )
+
     def capability_status(self) -> dict[str, dict[str, Any]]:
         model_paths = self.agent1_config.get("model_paths") or {}
         agent1_ready = isinstance(model_paths, dict) and all(
@@ -123,26 +135,18 @@ class Settings:
         agent2_ready = _configured_path(
             self.agent2_config.get("base_model_path"), directory=True
         ) and _configured_path(self.agent2_config.get("lora_path"), directory=True)
-        agent34_ready = bool(self.agent34_base_url and self.agent34_shared_token)
+        agent34_ready = self.agent34_configured
         return {
             "agent1": {"configured": agent1_ready, "mode": "local_adapter"},
             "agent2": {"configured": agent2_ready, "mode": "local_adapter"},
             "agent3": {
-                "configured": False,
+                "configured": agent34_ready,
                 "remote_service_configured": agent34_ready,
-                "mode": (
-                    "remote_service_pending_orchestration"
-                    if agent34_ready
-                    else "not_integrated"
-                ),
+                "mode": "remote_service" if agent34_ready else "not_configured",
             },
             "agent4": {
-                "configured": False,
+                "configured": agent34_ready,
                 "remote_service_configured": agent34_ready,
-                "mode": (
-                    "remote_service_pending_orchestration"
-                    if agent34_ready
-                    else "not_integrated"
-                ),
+                "mode": "remote_service" if agent34_ready else "not_configured",
             },
         }

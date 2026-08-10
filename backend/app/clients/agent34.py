@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import mimetypes
+from contextlib import ExitStack
 from pathlib import Path
 from typing import Any
 
@@ -103,39 +104,52 @@ class Agent34Client:
         payload: dict[str, Any],
         pre_image: str | Path,
         post_image: str | Path,
+        damage_map: str | Path | None = None,
+        fused_overlay: str | Path | None = None,
+        road_status_map: str | Path | None = None,
+        building_instance_mask: str | Path | None = None,
     ) -> dict[str, Any]:
-        pre_path = Path(pre_image)
-        post_path = Path(post_image)
-        for label, path in (("pre_image", pre_path), ("post_image", post_path)):
+        supplied: dict[str, str | Path | None] = {
+            "pre_image": pre_image,
+            "post_image": post_image,
+            "damage_map": damage_map,
+            "fused_overlay": fused_overlay,
+            "road_status_map": road_status_map,
+            "building_instance_mask": building_instance_mask,
+        }
+        paths: dict[str, Path] = {}
+        for label, value in supplied.items():
+            if value is None:
+                continue
+            path = Path(value)
             if not path.is_file():
                 raise FileNotFoundError(f"{label} does not exist")
+            paths[label] = path
+        for required in ("pre_image", "post_image"):
+            if required not in paths:
+                raise ValueError(f"{required} is required")
 
-        def image_part(path: Path) -> tuple[str, Any, str]:
-            mime_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
-            return path.name, path.open("rb"), mime_type
-
-        pre_part = image_part(pre_path)
-        post_part = image_part(post_path)
-        try:
-            response = self._client.post(
-                AGENT3_VERIFY_PATH,
-                files={
-                    "payload": (
-                        "payload.json",
-                        json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-                        "application/json",
-                    ),
-                    "pre_image": pre_part,
-                    "post_image": post_part,
-                },
-            )
-        except httpx.HTTPError as error:
-            raise Agent34ServiceError(
-                "REMOTE_UNAVAILABLE", "Agent3 service is unavailable"
-            ) from error
-        finally:
-            pre_part[1].close()
-            post_part[1].close()
+        with ExitStack() as stack:
+            files: dict[str, tuple[str, Any, str]] = {}
+            for label, path in paths.items():
+                mime_type = (
+                    mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+                )
+                files[label] = (
+                    path.name,
+                    stack.enter_context(path.open("rb")),
+                    mime_type,
+                )
+            try:
+                response = self._client.post(
+                    AGENT3_VERIFY_PATH,
+                    data={"payload": json.dumps(payload, ensure_ascii=False)},
+                    files=files,
+                )
+            except httpx.HTTPError as error:
+                raise Agent34ServiceError(
+                    "REMOTE_UNAVAILABLE", "Agent3 service is unavailable"
+                ) from error
         return self._response_json(response)
 
     def generate_report(self, *, payload: dict[str, Any]) -> dict[str, Any]:

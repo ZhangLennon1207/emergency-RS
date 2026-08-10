@@ -9,8 +9,8 @@
 
 | 当前系统 | capability | 历史模型版本 |
 | --- | --- | --- |
-| Agent3 | `evidence_verification` | Agent4-V4 |
-| Agent4 | `report_generation` | Agent5-V2 |
+| Agent3 | `evidence_verification` | Agent3-V5.2 |
+| Agent4 | `report_generation` | Agent4-V3 |
 
 新 API、GitHub 目录、日志和前端统一使用 Agent3/Agent4。历史配置、权重目录和实验记录可以保留 Agent4/Agent5 文件名，通过 `source_version` 追踪，不做全局重命名。
 
@@ -23,14 +23,14 @@ backend/
 ├── agents/
 │   ├── agent3/
 │   │   ├── adapter.py
-│   │   ├── runtime/                  # Agent4-V4 稳定源码，不含权重
+│   │   ├── runtime/                  # Agent3-V5.2 稳定源码，不含权重
 │   │   ├── prompts/evidence_verification.txt
 │   │   ├── schemas/
 │   │   ├── model_metadata.json
 │   │   └── tests/
 │   └── agent4/
 │       ├── adapter.py
-│       ├── runtime/                  # Agent5-V2 稳定源码，不含权重
+│       ├── runtime/                  # Agent4-V3 稳定源码，不含权重
 │       ├── prompts/report_generation.txt
 │       ├── schemas/
 │       ├── model_metadata.json
@@ -161,9 +161,13 @@ Authorization: Bearer <AGENT34_SHARED_TOKEN>
 
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
-| `payload` | `application/json` 文件部分 | 标识符、版本、evidence_list、claim_list |
+| `payload` | UTF-8 JSON 字符串表单字段 | 标识符、版本、evidence_list、claim_list |
 | `pre_image` | 图片文件 | 灾前图 |
 | `post_image` | 图片文件 | 灾后图 |
+| `damage_map` | 可选图片文件 | Agent1 建筑损伤可视化 |
+| `fused_overlay` | 可选图片文件 | Agent1 融合叠加图 |
+| `road_status_map` | 可选图片文件 | Agent1 道路状态可视化 |
+| `building_instance_mask` | 可选图片文件 | Agent1 建筑实例定位掩膜 |
 
 `payload`：
 
@@ -174,8 +178,8 @@ Authorization: Bearer <AGENT34_SHARED_TOKEN>
   "job_id": "job-001",
   "sample_id": "sample-001",
   "source_schema_versions": {
-    "evidence_list": "待真实样例冻结",
-    "claim_list": "1.1"
+    "evidence_list": "agent1-ledger-2.1-to-evidence-list-v1",
+    "claim_list": "1.1+keyword-rules-v1+claim-type-evidence-rules-v1"
   },
   "evidence_list": [],
   "claim_list": [
@@ -183,7 +187,8 @@ Authorization: Bearer <AGENT34_SHARED_TOKEN>
       "claim_id": "C001",
       "claim": "Several buildings in the center appear damaged.",
       "language": "en",
-      "related_evidence_ids": []
+      "claim_type": "building_damage_presence",
+      "related_evidence_ids": ["SCENE_BUILDING_SUMMARY", "VIS_DAMAGE_MAP"]
     }
   ]
 }
@@ -194,26 +199,28 @@ Authorization: Bearer <AGENT34_SHARED_TOKEN>
 1. 校验双图可解码且成对。
 2. 校验 `job_id`、`sample_id`、claim/evidence ID 唯一。
 3. HTTP 一次接收完整 `claim_list`。
-4. Runtime 内部按 Agent4-V4 稳定逻辑逐 claim 调用。
+4. Runtime 内部按 Agent3-V5.2 稳定逻辑逐 claim 调用。
 5. 同一场景内不得为每条 claim 重新加载一次 7B 基座模型。
 6. 保存每条 raw output，再运行后处理、校验和聚合。
-7. HTTP 只返回 normalized JSON。
+7. 模型返回的 `evidence_ids` 必须属于该 claim 输入的证据集合。
+8. HTTP 只返回 normalized JSON；raw output 不返回前端。
 
 响应：
 
 ```json
 {
   "contract_version": "agent34-http-1.0",
-  "pipeline_version": "competition-four-agent-v1",
   "job_id": "job-001",
   "sample_id": "sample-001",
-  "agent_code": "agent3",
-  "capability": "evidence_verification",
-  "source_version": "Agent4-V4",
-  "runtime_version": "agent3-v4-baseline",
-  "status": "succeeded",
-  "check_result": {},
-  "verified_evidence_package": {}
+  "verified_evidence_package": {
+    "schema_version": "agent3_verified_package_v1.1",
+    "task_info": {"scene_uid": "sample-001"},
+    "accepted_claims": [],
+    "revised_claims": [],
+    "rejected_claims": [],
+    "pending_claims": [],
+    "summary": {"accepted": 0, "revised": 0, "rejected": 0, "pending": 0}
+  }
 }
 ```
 
@@ -238,27 +245,19 @@ Agent4 模型的唯一事实输入是 `verified_evidence_package`。`review_flag
 ```json
 {
   "contract_version": "agent34-http-1.0",
-  "pipeline_version": "competition-four-agent-v1",
   "job_id": "job-001",
   "sample_id": "sample-001",
-  "agent_code": "agent4",
-  "capability": "report_generation",
-  "source_version": "Agent5-V2",
-  "runtime_version": "agent4-v2-baseline",
-  "status": "succeeded",
   "platform_report_json": {},
-  "markdown_report": "## 1. 报告摘要\n..."
+  "markdown_report_zh": "# 遥感灾情初步研判报告\n...",
+  "markdown_report_en": "# Preliminary Remote-Sensing Assessment Report\n..."
 }
 ```
 
-Markdown 标题固定为：
+中英文 Markdown 均包含摘要、指标、分区、证据校验、局限与声明等固定语义章节；具体中文序号和英文标题由 Agent4-V3 renderer 生成。前端分别读取 `markdown_report_zh` 和 `markdown_report_en`，不得再假定单一 `markdown_report` 字段。
 
 ```text
-## 1. 报告摘要
-## 2. 核心灾情指标
-## 3. 分区评估结果
-## 4. 证据支撑与一致性校验
-## 5. 证据局限与不可下结论事项
+中文：报告摘要 / 核心灾情指标 / 分区评估结果 / 证据支撑与一致性校验 / 证据局限与不可下结论事项 / 声明
+English: Executive Summary / Key Disaster Indicators / Regional Assessment / Evidence Support and Consistency Check / Limitations and Non-conclusive Items / Disclaimer
 ```
 
 ## 5. 标识符规则
@@ -309,9 +308,9 @@ Markdown 标题固定为：
 - 分别记录 cold start、warm mean/median/p95 和 peak VRAM。
 - Agent3 记录单 claim 与 5 claims 总耗时；Agent4 记录单报告耗时。
 
-## 8. 魏松辰必须提供的 evidence_list 样例
+## 8. evidence_list 映射基线
 
-请提供 3～5 套脱敏 JSON，不要提供影像或数据集：
+魏松辰最终交付的 V5.2 fixture 和 HTTP 示例已经用于冻结总控映射。后续真实联调仍应保存 3～5 套脱敏 JSON，不要提交影像或数据集：
 
 1. 建筑变化为主的一套。
 2. 道路影响为主的一套。
@@ -323,14 +322,13 @@ Markdown 标题固定为：
 
 ```text
 原始 Agent1 evidence_ledger_core.json
-→ 实际送入历史 Agent4-V4 的 evidence_list
+→ 总控生成的标准 evidence_list
 → claim_list
-→ minimal_check raw/normalized
-→ check_result
+→ Agent3-V5.2 raw/normalized（raw 仅保存在本地运行目录）
 → verified_evidence_package
 ```
 
-可以替换 `sample_id`、路径和地理标识，但必须保留完整字段、类型、空值和嵌套关系。收到后由 AutigerBai 冻结 `evidence_mapper`；在此之前不要假定仓库现有 Agent1 ledger 与 historical evidence_list 完全同构。
+可以替换 `sample_id`、路径和地理标识，但必须保留完整字段、类型、空值和嵌套关系。当前映射版本为 `agent1-ledger-2.1-to-evidence-list-v1`；改变字段语义时必须升级版本并重新跑契约测试。
 
 ## 9. 冻结前验收
 

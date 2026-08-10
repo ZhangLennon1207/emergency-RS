@@ -58,6 +58,27 @@ def build_artifact_index(
     return urls
 
 
+def find_result_artifact(
+    job_root: Path,
+    result: dict[str, Any],
+    artifact_type: str,
+) -> Path | None:
+    """Resolve one adapter artifact without allowing paths outside a job."""
+
+    for artifact in result.get("artifacts", []):
+        if not isinstance(artifact, dict):
+            continue
+        if str(artifact.get("artifact_type") or "") != artifact_type:
+            continue
+        relative = artifact.get("path")
+        if not isinstance(relative, str) or not relative:
+            continue
+        candidate = _inside(job_root, relative)
+        if candidate is not None and candidate.is_file():
+            return candidate
+    return None
+
+
 def resolve_artifact(job_root: Path, artifact_key: str) -> Path | None:
     if not SAFE_KEY.fullmatch(artifact_key):
         return None
