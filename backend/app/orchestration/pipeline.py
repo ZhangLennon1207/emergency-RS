@@ -7,7 +7,7 @@ PIPELINE_ORDER = (
     ("agent4", "report_generation"),
 )
 
-# Only these adapters are invoked by the current backend. Agent3/4 remain in
-# PIPELINE_ORDER as the target contract, but no completed implementation is
-# claimed until their real adapters or services are delivered and validated.
-ACTIVE_PIPELINE_ORDER = PIPELINE_ORDER[:2]
+# Agent3/4 are invoked through the frozen remote-service contract when their
+# URL and shared token are configured. Otherwise the orchestrator keeps the
+# established Agent1/2 local-only fallback.
+ACTIVE_PIPELINE_ORDER = PIPELINE_ORDER

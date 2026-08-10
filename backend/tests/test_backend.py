@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import io
+import json
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -308,6 +310,212 @@ def test_one_local_agent_failure_is_partial_success(tmp_path: Path) -> None:
     assert job["errors"][0]["message"] == "agent1 execution failed"
     assert str(tmp_path) not in str(job["errors"])
     assert job["result"]["agent2"]["status"] == "succeeded"
+
+
+def test_orchestrator_runs_remote_agent3_and_agent4_when_configured(
+    tmp_path: Path,
+) -> None:
+    settings = replace(
+        make_settings(tmp_path),
+        agent34_base_url="http://127.0.0.1:18100",
+        agent34_shared_token="private-token",
+    )
+    settings.ensure_runtime()
+    store = JobStore(settings.database_path)
+    store.initialize()
+    create_store_job(settings, store)
+    seen: dict[str, Any] = {}
+
+    def loader(agent_code: str):
+        def fake_adapter(payload, work_dir, config):
+            root = Path(work_dir)
+            if agent_code == "agent1":
+                sample_root = root / "agent1" / "sample-001"
+                paths = {
+                    "evidence_ledger": sample_root / "for_agent3" / "evidence_ledger_core.json",
+                    "damage_instance_color": sample_root / "building" / "damage_instance_color.png",
+                    "building_instance_mask": sample_root / "building" / "building_instance_mask.png",
+                    "road_status_color": sample_root / "road" / "road_status_color.png",
+                    "fused_overlay": sample_root / "fusion" / "fused_overlay.png",
+                }
+                ledger = {
+                    "schema_version": "2.1",
+                    "building_evidence": {
+                        "total_buildings": 1,
+                        "damaged_buildings": 1,
+                        "damage_ratio": 1.0,
+                        "building_instances": [
+                            {
+                                "evidence_id": "B0001",
+                                "building_id": 1,
+                                "bbox": {
+                                    "x_min": 1,
+                                    "y_min": 2,
+                                    "x_max": 8,
+                                    "y_max": 9,
+                                },
+                                "is_damaged": True,
+                                "damage_level": "major_damage",
+                                "damage_presence_confidence": 0.8,
+                                "confidence_is_calibrated": False,
+                            }
+                        ],
+                    },
+                    "road_evidence": {
+                        "evidence_id": "R0001",
+                        "total_road_pixels": 10,
+                        "affected_road_pixels": 2,
+                        "affected_road_ratio": 0.2,
+                        "is_affected": True,
+                        "affected_presence_confidence": 0.7,
+                        "confidence_is_calibrated": False,
+                    },
+                    "derived_assessment": {
+                        "building_risk_level": "high",
+                        "road_impact_level": "low",
+                        "scene_risk_level": "high",
+                    },
+                }
+                paths["evidence_ledger"].parent.mkdir(parents=True)
+                paths["evidence_ledger"].write_text(
+                    json.dumps(ledger), encoding="utf-8"
+                )
+                for artifact_type, path in paths.items():
+                    if artifact_type == "evidence_ledger":
+                        continue
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_bytes(image_bytes())
+                return {
+                    "status": "succeeded",
+                    "source_schema_versions": {"evidence_ledger": "2.1"},
+                    "summary": {
+                        "damaged_buildings": 1,
+                        "scene_risk_level": "high",
+                    },
+                    "review_flags": {
+                        "review_required": False,
+                        "review_reasons": [],
+                    },
+                    "artifacts": [
+                        {
+                            "artifact_type": artifact_type,
+                            "path": path.relative_to(root).as_posix(),
+                        }
+                        for artifact_type, path in paths.items()
+                    ],
+                }
+            return {
+                "status": "succeeded",
+                "source_schema_version": "1.1",
+                "language": "en",
+                "description": "One building shows severe structural damage.",
+                "claim_builder_version": "sentence-span-v1",
+                "claim_list": [
+                    {
+                        "claim_id": "C001",
+                        "claim": "One building shows severe structural damage.",
+                        "language": "en",
+                        "related_evidence_ids": [],
+                    }
+                ],
+                "artifacts": [],
+            }
+
+        return fake_adapter
+
+    class FakeAgent34Client:
+        closed = False
+
+        def verify(self, **kwargs):
+            seen["verify"] = kwargs
+            claim = kwargs["payload"]["claim_list"][0]
+            assert claim["claim_type"] == "building_damage_level"
+            assert "B0001" in claim["related_evidence_ids"]
+            assert kwargs["damage_map"].is_file()
+            assert kwargs["fused_overlay"].is_file()
+            assert kwargs["road_status_map"].is_file()
+            assert kwargs["building_instance_mask"].is_file()
+            return {
+                "contract_version": "agent34-http-1.0",
+                "verified_evidence_package": {
+                    "schema_version": "agent3_verified_package_v1.1",
+                    "task_info": {"scene_uid": "sample-001"},
+                    "accepted_claims": [
+                        {
+                            "claim_id": "C001",
+                            "atomic_claim": claim["claim"],
+                            "claim_type": claim["claim_type"],
+                            "support_status": "supported",
+                            "evidence_ids": ["B0001"],
+                        }
+                    ],
+                    "revised_claims": [],
+                    "rejected_claims": [],
+                    "pending_claims": [],
+                    "audit_records": [
+                        {
+                            "raw_first_output": "private model text",
+                            "crop_region": {"x_min": 1, "y_min": 2},
+                        }
+                    ],
+                    "summary": {
+                        "accepted": 1,
+                        "revised": 0,
+                        "rejected": 0,
+                        "pending": 0,
+                    },
+                },
+            }
+
+        def generate_report(self, *, payload):
+            seen["report"] = payload
+            assert "raw_first_output" not in json.dumps(payload)
+            return {
+                "contract_version": "agent34-http-1.0",
+                "platform_report_json": {
+                    "schema_version": "agent4_report_v3",
+                    "report_type": "preliminary_remote_sensing_assessment",
+                    "review_info": {"human_review_required": False},
+                },
+                "markdown_report_zh": "# 中文灾情报告",
+                "markdown_report_en": "# English disaster report",
+            }
+
+        def close(self):
+            self.closed = True
+
+    fake_client = FakeAgent34Client()
+    orchestrator = JobOrchestrator(
+        settings,
+        store,
+        adapter_loader=loader,
+        agent34_client_factory=lambda _settings: fake_client,
+    )
+    assert orchestrator.process_next_job() is True
+
+    job = store.get_job("test-job")
+    assert job is not None
+    assert job["status"] == "succeeded"
+    assert job["result"]["four_agent_pipeline_complete"] is True
+    assert job["result"]["scope"] == "four_agent_remote_service"
+    assert job["result"]["agent2"]["verified"] is True
+    claim = job["result"]["agent2"]["claim_list"][0]
+    assert claim["claim_type"] == "building_damage_level"
+    assert claim["related_evidence_ids"]
+    assert job["result"]["agent3"]["status"] == "succeeded"
+    assert job["result"]["agent4"]["status"] == "succeeded"
+    assert "raw_first_output" not in json.dumps(job["result"])
+    assert "agent3_verified_evidence_package" in job["result"]["artifacts"]
+    assert "agent4_platform_report" in job["result"]["artifacts"]
+    assert "agent4_markdown_report_zh" in job["result"]["artifacts"]
+    assert fake_client.closed is True
+    assert "private model text" in (
+        settings.runtime_root
+        / "jobs"
+        / "test-job"
+        / "logs"
+        / "agent3_remote_response.json"
+    ).read_text(encoding="utf-8")
 
 
 def test_artifact_path_traversal_is_rejected(tmp_path: Path) -> None:

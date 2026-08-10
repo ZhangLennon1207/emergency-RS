@@ -9,15 +9,50 @@ import traceback
 from pathlib import Path
 from typing import Any, Callable
 
-from backend.app.artifacts import build_artifact_index
+from backend.app.artifacts import build_artifact_index, find_result_artifact
+from backend.app.clients.agent34 import Agent34Client, Agent34ServiceError
 from backend.app.config import Settings
 from backend.app.db import JobStore, utc_now
+from backend.app.integration import (
+    AGENT34_CONTRACT_VERSION,
+    AGENT34_PIPELINE_VERSION,
+    CLAIM_TYPE_MAPPER_VERSION,
+    EVIDENCE_LINKER_VERSION,
+    EVIDENCE_MAPPER_VERSION,
+    add_claim_types,
+    build_agent3_verify_payload,
+    build_agent4_report_payload,
+    build_evidence_list,
+    link_claims_to_evidence,
+)
 
 
 Adapter = Callable[[dict[str, Any], str, dict[str, Any] | None], dict[str, Any]]
+Agent34ClientFactory = Callable[[Settings], Any]
+
 ENTRYPOINTS = {
     "agent1": "backend.agents.agent1.adapter:run",
     "agent2": "backend.agents.agent2.adapter:run",
+}
+
+OPTIONAL_AGENT3_ARTIFACTS = {
+    "damage_map": "damage_instance_color",
+    "fused_overlay": "fused_overlay",
+    "road_status_map": "road_status_color",
+    "building_instance_mask": "building_instance_mask",
+}
+
+PRIVATE_REMOTE_KEYS = {
+    "images",
+    "instruction",
+    "prompt",
+    "raw_crop_output",
+    "raw_first_output",
+    "raw_model_output",
+    "raw_output",
+    "raw_retry_output",
+    "second_pass_context",
+    "system",
 }
 
 
@@ -28,6 +63,17 @@ def load_adapter(agent_code: str) -> Adapter:
     if not callable(function):
         raise TypeError(f"Adapter entrypoint is not callable: {entrypoint}")
     return function
+
+
+def create_agent34_client(settings: Settings) -> Agent34Client:
+    if not settings.agent34_base_url or not settings.agent34_shared_token:
+        raise ValueError("Agent3/4 remote service is not configured")
+    return Agent34Client(
+        base_url=settings.agent34_base_url,
+        shared_token=settings.agent34_shared_token,
+        connect_timeout_seconds=settings.agent34_connect_timeout_seconds,
+        read_timeout_seconds=settings.agent34_read_timeout_seconds,
+    )
 
 
 def _release_model_memory() -> None:
@@ -42,16 +88,38 @@ def _release_model_memory() -> None:
         pass
 
 
+def _sanitize_remote_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {
+            key: _sanitize_remote_value(item)
+            for key, item in value.items()
+            if key not in PRIVATE_REMOTE_KEYS
+        }
+    if isinstance(value, list):
+        return [_sanitize_remote_value(item) for item in value]
+    return value
+
+
+def _artifact_types(result: dict[str, Any]) -> set[str]:
+    return {
+        str(item.get("artifact_type") or "")
+        for item in result.get("artifacts", [])
+        if isinstance(item, dict) and item.get("artifact_type")
+    }
+
+
 class JobOrchestrator:
     def __init__(
         self,
         settings: Settings,
         store: JobStore,
         adapter_loader: Callable[[str], Adapter] = load_adapter,
+        agent34_client_factory: Agent34ClientFactory = create_agent34_client,
     ) -> None:
         self.settings = settings
         self.store = store
         self.adapter_loader = adapter_loader
+        self.agent34_client_factory = agent34_client_factory
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
 
@@ -61,7 +129,7 @@ class JobOrchestrator:
         self._stop_event.clear()
         self._thread = threading.Thread(
             target=self._run_loop,
-            name="emergency-rs-local-model-queue",
+            name="emergency-rs-model-queue",
             daemon=True,
         )
         self._thread.start()
@@ -87,6 +155,14 @@ class JobOrchestrator:
         self._execute_job(job)
         return True
 
+    @staticmethod
+    def _write_error(work_dir: Path, agent_code: str) -> None:
+        logs_root = work_dir / "logs"
+        logs_root.mkdir(parents=True, exist_ok=True)
+        (logs_root / f"{agent_code}_error.log").write_text(
+            traceback.format_exc(), encoding="utf-8"
+        )
+
     def _run_agent(
         self,
         *,
@@ -101,21 +177,195 @@ class JobOrchestrator:
             json.dumps(result, ensure_ascii=False)
             return result.get("status") == "succeeded", result
         except Exception as error:
-            logs_root = work_dir / "logs"
-            logs_root.mkdir(parents=True, exist_ok=True)
-            (logs_root / f"{agent_code}_error.log").write_text(
-                traceback.format_exc(), encoding="utf-8"
-            )
+            self._write_error(work_dir, agent_code)
             return False, {
                 "agent_code": agent_code,
                 "status": "failed",
-                # Full exception details remain in the ignored runtime log.
-                # Public API errors must not expose model/input absolute paths.
                 "error": f"{agent_code} execution failed",
                 "error_type": type(error).__name__,
             }
         finally:
             _release_model_memory()
+
+    def _remote_failure(
+        self,
+        *,
+        agent_code: str,
+        work_dir: Path,
+        error: Exception,
+    ) -> dict[str, Any]:
+        self._write_error(work_dir, agent_code)
+        result = {
+            "agent_code": agent_code,
+            "status": "failed",
+            "error": f"{agent_code} execution failed",
+            "error_type": type(error).__name__,
+        }
+        if isinstance(error, Agent34ServiceError):
+            result["error_code"] = error.code
+            result["remote_status_code"] = error.status_code
+        return result
+
+    @staticmethod
+    def _write_json_artifact(path: Path, payload: dict[str, Any]) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+
+    def _prepare_agent3_request(
+        self,
+        *,
+        job_id: str,
+        sample_id: str,
+        job_root: Path,
+        agent1_result: dict[str, Any],
+        agent2_result: dict[str, Any],
+    ) -> tuple[dict[str, Any], dict[str, Path], list[dict[str, Any]]]:
+        ledger_path = find_result_artifact(
+            job_root, agent1_result, "evidence_ledger"
+        )
+        if ledger_path is None:
+            raise ValueError("Agent1 evidence ledger artifact is missing")
+        ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+        if not isinstance(ledger, dict):
+            raise ValueError("Agent1 evidence ledger must contain an object")
+
+        evidence_list = build_evidence_list(
+            ledger,
+            available_artifact_types=_artifact_types(agent1_result),
+        )
+        claim_list = add_claim_types(agent2_result.get("claim_list"))
+        claim_list = link_claims_to_evidence(claim_list, evidence_list)
+        request = build_agent3_verify_payload(
+            job_id=job_id,
+            sample_id=sample_id,
+            evidence_list=evidence_list,
+            claim_list=claim_list,
+            evidence_schema_version=EVIDENCE_MAPPER_VERSION,
+            claim_schema_version=(
+                f"1.1+{CLAIM_TYPE_MAPPER_VERSION}+{EVIDENCE_LINKER_VERSION}"
+            ),
+        )
+
+        optional_assets: dict[str, Path] = {}
+        for http_name, artifact_type in OPTIONAL_AGENT3_ARTIFACTS.items():
+            path = find_result_artifact(job_root, agent1_result, artifact_type)
+            if path is not None:
+                optional_assets[http_name] = path
+        return request, optional_assets, claim_list
+
+    def _run_agent3(
+        self,
+        *,
+        client: Any,
+        job: dict[str, Any],
+        job_root: Path,
+        agent1_result: dict[str, Any],
+        agent2_result: dict[str, Any],
+    ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+        request, optional_assets, normalized_claims = self._prepare_agent3_request(
+            job_id=str(job["job_id"]),
+            sample_id=str(job["sample_id"]),
+            job_root=job_root,
+            agent1_result=agent1_result,
+            agent2_result=agent2_result,
+        )
+        response = client.verify(
+            payload=request,
+            pre_image=job["pre_image_path"],
+            post_image=job["post_image_path"],
+            **optional_assets,
+        )
+        package = response.get("verified_evidence_package")
+        if not isinstance(package, dict) or not package:
+            raise Agent34ServiceError(
+                "REMOTE_RESPONSE_INVALID",
+                "Agent3 response is missing verified_evidence_package",
+            )
+
+        logs_root = job_root / "logs"
+        self._write_json_artifact(logs_root / "agent3_remote_response.json", response)
+        sanitized = _sanitize_remote_value(response)
+        package = sanitized["verified_evidence_package"]
+        artifact_path = job_root / "agent3" / "verified_evidence_package.json"
+        self._write_json_artifact(artifact_path, package)
+        result = {
+            **sanitized,
+            "agent_code": "agent3",
+            "capability": "evidence_verification",
+            "source_version": "Agent3-V5.2",
+            "status": "succeeded",
+            "artifacts": [
+                {
+                    "artifact_type": "verified_evidence_package",
+                    "path": artifact_path.relative_to(job_root).as_posix(),
+                }
+            ],
+        }
+        json.dumps(result, ensure_ascii=False)
+        return result, normalized_claims
+
+    def _run_agent4(
+        self,
+        *,
+        client: Any,
+        job_id: str,
+        sample_id: str,
+        job_root: Path,
+        verified_evidence_package: dict[str, Any],
+    ) -> dict[str, Any]:
+        request = build_agent4_report_payload(
+            job_id=job_id,
+            sample_id=sample_id,
+            verified_evidence_package=verified_evidence_package,
+        )
+        response = client.generate_report(payload=request)
+        platform_report = response.get("platform_report_json")
+        markdown_zh = response.get("markdown_report_zh")
+        markdown_en = response.get("markdown_report_en")
+        if not isinstance(platform_report, dict) or not platform_report:
+            raise Agent34ServiceError(
+                "REMOTE_RESPONSE_INVALID",
+                "Agent4 response is missing platform_report_json",
+            )
+        if not isinstance(markdown_zh, str) or not isinstance(markdown_en, str):
+            raise Agent34ServiceError(
+                "REMOTE_RESPONSE_INVALID",
+                "Agent4 response is missing bilingual Markdown",
+            )
+
+        sanitized = _sanitize_remote_value(response)
+        agent4_root = job_root / "agent4"
+        report_path = agent4_root / "platform_report.json"
+        zh_path = agent4_root / "report_zh.md"
+        en_path = agent4_root / "report_en.md"
+        self._write_json_artifact(report_path, sanitized["platform_report_json"])
+        zh_path.write_text(markdown_zh, encoding="utf-8")
+        en_path.write_text(markdown_en, encoding="utf-8")
+        result = {
+            **sanitized,
+            "agent_code": "agent4",
+            "capability": "report_generation",
+            "source_version": "Agent4-V3",
+            "status": "succeeded",
+            "artifacts": [
+                {
+                    "artifact_type": "platform_report",
+                    "path": report_path.relative_to(job_root).as_posix(),
+                },
+                {
+                    "artifact_type": "markdown_report_zh",
+                    "path": zh_path.relative_to(job_root).as_posix(),
+                },
+                {
+                    "artifact_type": "markdown_report_en",
+                    "path": en_path.relative_to(job_root).as_posix(),
+                },
+            ],
+        }
+        json.dumps(result, ensure_ascii=False)
+        return result
 
     def _execute_job(self, job: dict[str, Any]) -> None:
         job_id = str(job["job_id"])
@@ -149,15 +399,13 @@ class JobOrchestrator:
             job_id,
             status="running_agent2",
             stage="Agent2 正在生成变化描述",
-            progress=55,
+            progress=45,
             errors_json=errors,
         )
-        # Agent2 must remain independent from Agent1 and only receives the
-        # paired pre/post images plus the shared sample identifier.
-        agent2_payload = dict(payload)
+        # Agent2 remains independent from Agent1 and sees only the image pair.
         agent2_ok, agent2_result = self._run_agent(
             agent_code="agent2",
-            payload=agent2_payload,
+            payload=dict(payload),
             work_dir=job_root,
             config=self.settings.agent2_config,
         )
@@ -165,6 +413,97 @@ class JobOrchestrator:
             errors.append(
                 {"agent": "agent2", "message": str(agent2_result.get("error"))}
             )
+
+        remote_configured = self.settings.agent34_configured
+        agent3_ok: bool | None = None
+        agent4_ok: bool | None = None
+        agent3_result: dict[str, Any] = {}
+        agent4_result: dict[str, Any] = {}
+        remote_skip_reason = "Agent3/4 远程服务尚未配置"
+
+        if remote_configured and agent1_ok and agent2_ok:
+            client = None
+            try:
+                client = self.agent34_client_factory(self.settings)
+                self.store.update_job(
+                    job_id,
+                    status="running_agent3",
+                    stage="Agent3 正在逐条核验证据",
+                    progress=65,
+                    errors_json=errors,
+                )
+                try:
+                    agent3_result, normalized_claims = self._run_agent3(
+                        client=client,
+                        job=job,
+                        job_root=job_root,
+                        agent1_result=agent1_result,
+                        agent2_result=agent2_result,
+                    )
+                    agent2_result = dict(agent2_result)
+                    agent2_result["claim_list"] = normalized_claims
+                    agent2_result["claim_type_mapper_version"] = (
+                        CLAIM_TYPE_MAPPER_VERSION
+                    )
+                    agent2_result["evidence_linker_version"] = EVIDENCE_LINKER_VERSION
+                    agent3_ok = True
+                except Exception as error:
+                    agent3_ok = False
+                    agent3_result = self._remote_failure(
+                        agent_code="agent3", work_dir=job_root, error=error
+                    )
+                    errors.append(
+                        {"agent": "agent3", "message": agent3_result["error"]}
+                    )
+
+                if agent3_ok:
+                    self.store.update_job(
+                        job_id,
+                        status="running_agent4",
+                        stage="Agent4 正在生成可信双语报告",
+                        progress=85,
+                        errors_json=errors,
+                    )
+                    try:
+                        agent4_result = self._run_agent4(
+                            client=client,
+                            job_id=job_id,
+                            sample_id=sample_id,
+                            job_root=job_root,
+                            verified_evidence_package=agent3_result[
+                                "verified_evidence_package"
+                            ],
+                        )
+                        agent4_ok = True
+                    except Exception as error:
+                        agent4_ok = False
+                        agent4_result = self._remote_failure(
+                            agent_code="agent4", work_dir=job_root, error=error
+                        )
+                        errors.append(
+                            {"agent": "agent4", "message": agent4_result["error"]}
+                        )
+                else:
+                    remote_skip_reason = "Agent3 失败，Agent4 未执行"
+            except Exception as error:
+                agent3_ok = False
+                agent3_result = self._remote_failure(
+                    agent_code="agent3", work_dir=job_root, error=error
+                )
+                errors.append({"agent": "agent3", "message": agent3_result["error"]})
+                remote_skip_reason = "Agent3/4 远程服务客户端创建失败"
+            finally:
+                if client is not None and hasattr(client, "close"):
+                    try:
+                        client.close()
+                    except Exception:
+                        logs_root = job_root / "logs"
+                        logs_root.mkdir(parents=True, exist_ok=True)
+                        (logs_root / "agent34_client_close_error.log").write_text(
+                            traceback.format_exc(), encoding="utf-8"
+                        )
+        elif remote_configured:
+            remote_skip_reason = "Agent1 或 Agent2 失败，Agent3/4 未执行"
 
         self.store.update_job(
             job_id,
@@ -178,6 +517,8 @@ class JobOrchestrator:
             for code, ok, result in (
                 ("agent1", agent1_ok, agent1_result),
                 ("agent2", agent2_ok, agent2_result),
+                ("agent3", agent3_ok, agent3_result),
+                ("agent4", agent4_ok, agent4_result),
             )
             if ok
         }
@@ -189,15 +530,28 @@ class JobOrchestrator:
             agent1_result=agent1_result,
             agent2_ok=agent2_ok,
             agent2_result=agent2_result,
+            agent3_ok=agent3_ok,
+            agent3_result=agent3_result,
+            agent4_ok=agent4_ok,
+            agent4_result=agent4_result,
+            remote_configured=remote_configured,
+            remote_skip_reason=remote_skip_reason,
             artifacts=artifacts,
         )
-        success_count = int(agent1_ok) + int(agent2_ok)
-        if success_count == 2:
+
+        if agent1_ok and agent2_ok and not remote_configured:
             status, stage = "succeeded", "Agent1/2 本地分析完成"
-        elif success_count == 1:
-            status, stage = "partial_success", "Agent1/2 部分分析完成"
+        elif all(outcome is True for outcome in (agent1_ok, agent2_ok, agent3_ok, agent4_ok)):
+            status = "succeeded"
+            stage = (
+                "四智能体分析完成，存在待人工复核项"
+                if result["review_required"]
+                else "四智能体分析与报告生成完成"
+            )
+        elif any(outcome is True for outcome in (agent1_ok, agent2_ok, agent3_ok, agent4_ok)):
+            status, stage = "partial_success", "部分智能体完成，已保留可用结果"
         else:
-            status, stage = "failed", "Agent1/2 分析失败"
+            status, stage = "failed", "分析失败"
         self.store.update_job(
             job_id,
             status=status,
@@ -217,22 +571,89 @@ class JobOrchestrator:
         agent1_result: dict[str, Any],
         agent2_ok: bool,
         agent2_result: dict[str, Any],
+        agent3_ok: bool | None,
+        agent3_result: dict[str, Any],
+        agent4_ok: bool | None,
+        agent4_result: dict[str, Any],
+        remote_configured: bool,
+        remote_skip_reason: str,
         artifacts: dict[str, str],
     ) -> dict[str, Any]:
-        skipped_reason = "真实 Agent3/4 adapter 或远程服务尚未接入"
+        agent4_skip_reason = (
+            "Agent3 失败，Agent4 未执行"
+            if agent3_ok is False
+            else remote_skip_reason
+        )
         runs = [
             self._agent_run("agent1", "visual_evidence", agent1_ok, agent1_result),
             self._agent_run("agent2", "change_description", agent2_ok, agent2_result),
-            self._skipped_run("agent3", "evidence_verification", skipped_reason),
-            self._skipped_run("agent4", "report_generation", skipped_reason),
+            self._remote_run(
+                "agent3",
+                "evidence_verification",
+                agent3_ok,
+                agent3_result,
+                remote_skip_reason,
+            ),
+            self._remote_run(
+                "agent4",
+                "report_generation",
+                agent4_ok,
+                agent4_result,
+                agent4_skip_reason,
+            ),
         ]
+
+        verified_package = (
+            agent3_result.get("verified_evidence_package") if agent3_ok else None
+        )
+        pending_count = 0
+        if isinstance(verified_package, dict):
+            summary = verified_package.get("summary")
+            if isinstance(summary, dict):
+                pending_count = int(summary.get("pending") or 0)
+            elif isinstance(verified_package.get("pending_claims"), list):
+                pending_count = len(verified_package["pending_claims"])
+        agent1_review = bool(
+            agent1_ok
+            and isinstance(agent1_result.get("review_flags"), dict)
+            and agent1_result["review_flags"].get("review_required")
+        )
+        report_review = False
+        if agent4_ok:
+            platform_report = agent4_result.get("platform_report_json")
+            review_info = (
+                platform_report.get("review_info")
+                if isinstance(platform_report, dict)
+                else None
+            )
+            report_review = bool(
+                isinstance(review_info, dict)
+                and review_info.get("human_review_required")
+            )
+        review_required = agent1_review or pending_count > 0 or report_review
+
+        four_agent_complete = all(
+            outcome is True for outcome in (agent1_ok, agent2_ok, agent3_ok, agent4_ok)
+        )
         return {
             "contract_version": self.settings.contract_version,
-            "pipeline_version": self.settings.pipeline_version,
+            "pipeline_version": (
+                AGENT34_PIPELINE_VERSION
+                if remote_configured
+                else self.settings.pipeline_version
+            ),
+            "agent34_contract_version": (
+                AGENT34_CONTRACT_VERSION if remote_configured else None
+            ),
             "job_id": job_id,
             "sample_id": sample_id,
-            "scope": "agent1_agent2_local_only",
-            "four_agent_pipeline_complete": False,
+            "scope": (
+                "four_agent_remote_service"
+                if remote_configured
+                else "agent1_agent2_local_only"
+            ),
+            "four_agent_pipeline_complete": four_agent_complete,
+            "review_required": review_required,
             "artifacts": artifacts,
             "agent_runs": runs,
             "agent1": {
@@ -255,22 +676,36 @@ class JobOrchestrator:
                 "claim_builder_version": (
                     agent2_result.get("claim_builder_version") if agent2_ok else None
                 ),
+                "claim_type_mapper_version": (
+                    agent2_result.get("claim_type_mapper_version") if agent2_ok else None
+                ),
+                "evidence_linker_version": (
+                    agent2_result.get("evidence_linker_version") if agent2_ok else None
+                ),
                 "claim_list": (
                     agent2_result.get("claim_list") if agent2_ok else None
                 ),
-                "verified": False,
-                "verification_status": "unverified",
+                "verified": bool(agent3_ok),
+                "verification_status": "verified" if agent3_ok else "unverified",
                 "notice": (
-                    agent2_result.get("notice")
+                    "Agent2 claims have been checked by Agent3."
+                    if agent3_ok
+                    else agent2_result.get("notice")
                     or "模型生成的变化描述，尚未经过 Agent3 证据校验。"
-                    if agent2_ok
-                    else "Agent2 未成功生成变化描述。"
                 ),
             },
-            "agent3": {"status": "skipped", "result": None, "reason": skipped_reason},
-            "agent4": {"status": "skipped", "result": None, "reason": skipped_reason},
-            "verification": None,
-            "report": None,
+            "agent3": (
+                agent3_result
+                if agent3_ok is not None
+                else {"status": "skipped", "result": None, "reason": remote_skip_reason}
+            ),
+            "agent4": (
+                agent4_result
+                if agent4_ok is not None
+                else {"status": "skipped", "result": None, "reason": agent4_skip_reason}
+            ),
+            "verification": agent3_result if agent3_ok else None,
+            "report": agent4_result if agent4_ok else None,
         }
 
     @staticmethod
@@ -290,23 +725,48 @@ class JobOrchestrator:
         }
 
     @staticmethod
-    def _skipped_run(agent_code: str, capability: str, reason: str) -> dict[str, Any]:
+    def _remote_run(
+        agent_code: str,
+        capability: str,
+        outcome: bool | None,
+        result: dict[str, Any],
+        reason: str,
+    ) -> dict[str, Any]:
+        if outcome is None:
+            return {
+                "agent_run_id": f"run_{agent_code}",
+                "agent_code": agent_code,
+                "capability": capability,
+                "status": "skipped",
+                "progress": 0,
+                "error": None,
+                "reason": reason,
+            }
         return {
             "agent_run_id": f"run_{agent_code}",
             "agent_code": agent_code,
             "capability": capability,
-            "status": "skipped",
-            "progress": 0,
-            "error": None,
-            "reason": reason,
+            "status": "succeeded" if outcome else "failed",
+            "progress": 100,
+            "error": None if outcome else {"message": result.get("error")},
         }
 
     def health(self) -> dict[str, Any]:
         capabilities = self.settings.capability_status()
-        local_ready = all(capabilities[code]["configured"] for code in ("agent1", "agent2"))
+        local_ready = all(
+            capabilities[code]["configured"] for code in ("agent1", "agent2")
+        )
+        remote_ready = all(
+            capabilities[code]["configured"] for code in ("agent3", "agent4")
+        )
         return {
             "status": "ok" if local_ready else "degraded",
-            "pipeline_scope": "agent1_agent2_local_only",
+            "pipeline_scope": (
+                "four_agent_remote_service"
+                if remote_ready
+                else "agent1_agent2_local_only"
+            ),
+            "four_agent_pipeline_configured": local_ready and remote_ready,
             "four_agent_pipeline_complete": False,
             "capabilities": capabilities,
             "queue_worker_running": bool(self._thread and self._thread.is_alive()),

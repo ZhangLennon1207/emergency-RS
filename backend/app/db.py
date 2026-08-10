@@ -70,7 +70,10 @@ class JobStore:
                 UPDATE jobs
                 SET status = 'queued', stage = '服务重启后重新排队', progress = 0,
                     updated_at = ?, started_at = NULL
-                WHERE status IN ('starting', 'running_agent1', 'running_agent2', 'assembling')
+                WHERE status IN (
+                    'starting', 'running_agent1', 'running_agent2',
+                    'running_agent3', 'running_agent4', 'assembling'
+                )
                 """,
                 (now,),
             )

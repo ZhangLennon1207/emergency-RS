@@ -22,7 +22,9 @@ def _claims():
         {
             "claim_id": "C001",
             "claim": "Several buildings appear damaged.",
-            "related_evidence_ids": [],
+            "language": "en",
+            "claim_type": "building_damage_presence",
+            "related_evidence_ids": ["E001"],
         }
     ]
 
@@ -61,8 +63,16 @@ def test_build_agent3_payload_rejects_unknown_related_evidence_id():
 def test_agent3_client_sends_multipart_images_and_bearer_token(tmp_path):
     pre = tmp_path / "pre.png"
     post = tmp_path / "post.png"
+    damage = tmp_path / "damage.png"
+    fused = tmp_path / "fused.png"
+    road = tmp_path / "road.png"
+    buildings = tmp_path / "buildings.png"
     pre.write_bytes(b"pre")
     post.write_bytes(b"post")
+    damage.write_bytes(b"damage")
+    fused.write_bytes(b"fused")
+    road.write_bytes(b"road")
+    buildings.write_bytes(b"buildings")
 
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.url.path == "/api/v1/agent3/verify"
@@ -70,9 +80,17 @@ def test_agent3_client_sends_multipart_images_and_bearer_token(tmp_path):
         assert request.headers["content-type"].startswith("multipart/form-data")
         body = request.read()
         assert b'name="payload"' in body
+        assert b'filename="payload.json"' not in body
         assert b'name="pre_image"' in body
         assert b'name="post_image"' in body
-        return httpx.Response(200, json={"check_result": {}, "verified_evidence_package": {}})
+        assert b'name="damage_map"' in body
+        assert b'name="fused_overlay"' in body
+        assert b'name="road_status_map"' in body
+        assert b'name="building_instance_mask"' in body
+        return httpx.Response(
+            200,
+            json={"verified_evidence_package": {"accepted_claims": []}},
+        )
 
     client = Agent34Client(
         base_url="http://wei-host:8100",
@@ -80,7 +98,15 @@ def test_agent3_client_sends_multipart_images_and_bearer_token(tmp_path):
         transport=httpx.MockTransport(handler),
     )
     try:
-        result = client.verify(payload={"job_id": "job-001"}, pre_image=pre, post_image=post)
+        result = client.verify(
+            payload={"job_id": "job-001"},
+            pre_image=pre,
+            post_image=post,
+            damage_map=damage,
+            fused_overlay=fused,
+            road_status_map=road,
+            building_instance_mask=buildings,
+        )
     finally:
         client.close()
 
@@ -93,7 +119,14 @@ def test_agent4_client_uses_current_path_and_json_body():
         assert request.headers["authorization"] == "Bearer private-token"
         body = json.loads(request.content)
         assert body["job_id"] == "job-001"
-        return httpx.Response(200, json={"platform_report_json": {}, "markdown_report": ""})
+        return httpx.Response(
+            200,
+            json={
+                "platform_report_json": {"schema_version": "agent4_report_v3"},
+                "markdown_report_zh": "# 中文报告",
+                "markdown_report_en": "# English report",
+            },
+        )
 
     payload = build_agent4_report_payload(
         job_id="job-001",
