@@ -1,14 +1,14 @@
 # 后端与智能体集成区
 
-本目录包含统一 FastAPI Job API、Agent1/2 本地 adapter、任务/Artifact 运行时管理和无模型测试。当前可验证范围是 **Agent1 + Agent2 本地集成**；Agent3/4 仍未接入真实代码或同学电脑上的服务。
+本目录包含统一 FastAPI Job API、Agent1/2 本地 adapter、Agent3/4 远程服务客户端、跨智能体映射、任务/Artifact 管理和无模型测试。未配置 `AGENT34_BASE_URL` 与 `AGENT34_SHARED_TOKEN` 时保持 Agent1/2 本地模式；配置后按冻结契约执行四阶段远程编排。
 
 ## 当前真实状态
 
 - Agent1：四个指定权重已在迁移后源码上完成严格加载和单样本 GPU 回归。
 - Agent2：Qwen2.5-VL + 指定 LoRA 已在迁移后 adapter 上完成单样本 GPU 回归；模型权重和 Prompt 不变，Adapter 额外生成向后兼容的 `claim_list`。
 - FastAPI：Job 创建、查询、上传校验、SQLite 队列、adapter 调度和 Artifact 下载已通过模拟 adapter 测试。
-- React 前端：已有兼容的 Job API 客户端，但尚未与本后端和真实模型完成实际联调。
-- Agent3/4：跨电脑 HTTP 契约和客户端已进入准备阶段，但尚未接入编排器；响应中仍固定为 `skipped`，`verification` 和 `report` 固定为 `null`，不得据此声明四智能体全流程完成。
+- React 前端：已有 Job API 客户端；新增 Agent3/4 状态和最终 V5.2/V3 字段仍需在真实后端响应上验收。
+- Agent3/4：总控侧映射、multipart 客户端、失败隔离和编排代码已完成无模型回归。魏松辰真实服务尚未在本机通过 SSH 隧道联调，因此只有单次真实任务的 `four_agent_pipeline_complete=true` 才表示该任务四阶段均成功。
 
 ## 目录职责
 
@@ -20,9 +20,9 @@ backend/
 │   ├── config.py           # 环境配置，不含个人路径
 │   ├── db.py               # 本地 SQLite 任务队列
 │   ├── artifacts.py        # 相对路径索引与越界防护
-│   ├── clients/            # Agent3/4 远程 HTTP 客户端（尚未接入编排器）
-│   ├── integration/        # 跨 Agent 标识符与请求契约
-│   └── orchestration/      # Agent1/2 adapter 编排
+│   ├── clients/            # Agent3/4 远程 HTTP 客户端
+│   ├── integration/        # claim 类型、证据转换/关联与请求契约
+│   └── orchestration/      # Agent1～4 条件编排与失败隔离
 ├── tests/                  # 不依赖权重/CUDA 的集成测试
 ├── scripts/                # 仓库安全检查
 ├── requirements.txt
@@ -46,7 +46,7 @@ python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --workers 1
 
 只使用一个 worker，避免每个进程重复加载大模型。前端本地环境配置 `VITE_API_BASE_URL=http://127.0.0.1:8000` 和 `VITE_USE_MOCK=false` 后，才能开始实际联调。
 
-Agent3/4 的预备配置为 `AGENT34_BASE_URL`、`AGENT34_SHARED_TOKEN`、`AGENT34_CONNECT_TIMEOUT_SECONDS` 和 `AGENT34_READ_TIMEOUT_SECONDS`。配置这些变量只代表远程地址已填写；在 `evidence_list` 映射经真实样例验证、编排器正式接入并完成真实回归前，健康接口仍不得把 Agent3/4 声明为已集成。跨电脑细节见 `docs/agent34-http-integration-contract.md`。
+Agent3/4 配置为 `AGENT34_BASE_URL`、`AGENT34_SHARED_TOKEN`、`AGENT34_CONNECT_TIMEOUT_SECONDS` 和 `AGENT34_READ_TIMEOUT_SECONDS`。魏松辰服务保持监听 `127.0.0.1:8100`；建议通过 SSH 隧道映射为本机 `127.0.0.1:18100`。配置字段只表示远程编排已启用，不等于真实服务已经通过验收。跨电脑细节见 `docs/agent34-http-integration-contract.md`。
 
 真实 Agent1/2 启动前先运行 `python backend/scripts/preflight_real_integration.py --env-file backend/.env`。模型文件准备、启动顺序和验收标准见 `docs/real-agent12-integration-runbook.md`。
 
@@ -66,7 +66,7 @@ GET  /api/v1/dashboard
 GET  /api/v1/health
 ```
 
-Agent1/2 都成功时，任务状态为 `succeeded`，含义仅是当前双智能体范围成功。响应同时返回：
+未配置 Agent3/4 时，Agent1/2 都成功仍返回兼容的本地范围：
 
 ```json
 {
@@ -76,6 +76,25 @@ Agent1/2 都成功时，任务状态为 `succeeded`，含义仅是当前双智�
   "report": null
 }
 ```
+
+配置远程服务后，总控执行 `Agent1 → Agent2 → Agent3 → Agent4`。只有四阶段都成功时返回：
+
+```json
+{
+  "scope": "four_agent_remote_service",
+  "pipeline_version": "competition-four-agent-v1",
+  "agent34_contract_version": "agent34-http-1.0",
+  "four_agent_pipeline_complete": true,
+  "verification": {"verified_evidence_package": {}},
+  "report": {
+    "platform_report_json": {},
+    "markdown_report_zh": "...",
+    "markdown_report_en": "..."
+  }
+}
+```
+
+Agent3 失败时跳过 Agent4；Agent4 失败时保留 Agent1～3 结果并返回 `partial_success`。远程原始生成文本只保存在 Git 忽略的运行日志中，公开 Job API 返回脱敏后的结构化结果。
 
 ## 无模型测试
 

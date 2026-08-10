@@ -24,7 +24,13 @@ ALLOWED_CONTENT_TYPES = {"image/png", "image/jpeg"}
 ALLOWED_FORMATS = {"PNG", "JPEG"}
 SAMPLE_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 ACTIVE_JOB_STATUSES = {
-    "queued", "starting", "running_agent1", "running_agent2", "assembling"
+    "queued",
+    "starting",
+    "running_agent1",
+    "running_agent2",
+    "running_agent3",
+    "running_agent4",
+    "assembling",
 }
 
 
@@ -66,7 +72,7 @@ def _public_job(job: dict[str, Any], settings: Settings) -> dict[str, Any]:
         "job_id": job["job_id"],
         "sample_id": job["sample_id"],
         "contract_version": settings.contract_version,
-        "pipeline_version": settings.pipeline_version,
+        "pipeline_version": settings.effective_pipeline_version,
         "status": job["status"],
         "stage": job["stage"],
         "progress": job["progress"],
@@ -86,7 +92,7 @@ def _public_job_summary(job: dict[str, Any], settings: Settings) -> dict[str, An
         "job_id": job["job_id"],
         "sample_id": job["sample_id"],
         "contract_version": settings.contract_version,
-        "pipeline_version": settings.pipeline_version,
+        "pipeline_version": settings.effective_pipeline_version,
         "status": job["status"],
         "stage": job["stage"],
         "progress": job["progress"],
@@ -151,7 +157,7 @@ def create_app(settings: Settings | None = None, *, start_worker: bool = True) -
         orchestrator.stop()
 
     app = FastAPI(
-        title="Emergency RS Agent1/2 Integration API",
+        title="Emergency RS Multi-Agent Integration API",
         version="1.0.0",
         lifespan=lifespan,
     )
@@ -169,10 +175,15 @@ def create_app(settings: Settings | None = None, *, start_worker: bool = True) -
     @app.get("/")
     def service_info() -> dict[str, Any]:
         return {
-            "service": "Emergency RS Agent1/2 Integration API",
+            "service": "Emergency RS Multi-Agent Integration API",
             "docs": "/docs",
             "health": "/api/v1/health",
-            "pipeline_scope": "agent1_agent2_local_only",
+            "pipeline_scope": (
+                "four_agent_remote_service"
+                if current_settings.agent34_configured
+                else "agent1_agent2_local_only"
+            ),
+            "four_agent_pipeline_configured": current_settings.agent34_configured,
             "four_agent_pipeline_complete": False,
         }
 
@@ -187,13 +198,21 @@ def create_app(settings: Settings | None = None, *, start_worker: bool = True) -
             1
             for job in jobs
             if bool(
-                (((job.get("result") or {}).get("agent1") or {}).get("summary") or {}).get(
-                    "review_required", False
+                (job.get("result") or {}).get(
+                    "review_required",
+                    (((job.get("result") or {}).get("agent1") or {}).get("summary") or {}).get(
+                        "review_required", False
+                    ),
                 )
             )
         )
         return {
-            "scope": "agent1_agent2_local_only",
+            "scope": (
+                "four_agent_remote_service"
+                if current_settings.agent34_configured
+                else "agent1_agent2_local_only"
+            ),
+            "four_agent_pipeline_configured": current_settings.agent34_configured,
             "four_agent_pipeline_complete": False,
             "counts": {
                 "total": len(jobs),

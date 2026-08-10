@@ -296,22 +296,21 @@ Agent3 尚未成功时，前端必须在 Agent2 文本上显示：
 
 ### Agent3
 
-当前项目 Agent3 对应最新交接包中的历史版本 `Agent4-V4`。前端使用：
+当前项目 Agent3 为 `Agent3-V5.2`。前端使用：
 
 ```json
 {
   "agent_code": "agent3",
   "capability": "evidence_verification",
-  "source_agent_id": "agent4",
-  "source_version": "Agent4-V4"
+  "source_agent_id": "agent3",
+  "source_version": "Agent3-V5.2"
 }
 ```
 
 | 文件 | artifact_type | 前端用途 |
 | --- | --- | --- |
-| `check_result.json` | `verification_result` | Claim 逐条校验、分类列表和修改建议 |
 | `verified_evidence_package.json` | `verified_evidence_package` | Agent4 报告生成的唯一可信事实输入 |
-| `run_manifest.json` | `agent3_run_manifest` | Agent4-V4 源模型和运行追踪 |
+| `run_manifest.json` | `agent3_run_manifest` | Agent3-V5.2 模型和运行追踪 |
 
 每条 Claim 至少包含：
 
@@ -328,32 +327,28 @@ Agent3 尚未成功时，前端必须在 Agent2 文本上显示：
 
 ### Agent4
 
-当前项目 Agent4 对应最新交接包中的历史版本 `Agent5-V2`：
+当前项目 Agent4 为 `Agent4-V3`：
 
 ```json
 {
   "agent_code": "agent4",
   "capability": "report_generation",
-  "source_agent_id": "agent5",
-  "source_version": "Agent5-V2"
+  "source_agent_id": "agent4",
+  "source_version": "Agent4-V3"
 }
 ```
 
 | 文件 | artifact_type | 前端用途 |
 | --- | --- | --- |
-| `platform_report_json` | `final_report_json` | 结论、限定结论、排除项和局限卡片 |
-| `markdown_report` | `final_report_markdown` | 固定五段式中文报告预览和下载 |
-| `final_report.docx` | `final_report_docx` | 可选 Word 下载 |
-| `run_manifest.json` | `agent4_run_manifest` | Agent5-V2 源模型和运行追踪 |
+| `platform_report.json` | `platform_report` | Agent4-V3 结构化报告卡片 |
+| `report_zh.md` | `markdown_report_zh` | 中文报告预览和下载 |
+| `report_en.md` | `markdown_report_en` | 英文报告预览和下载 |
+| `run_manifest.json` | `agent4_run_manifest` | Agent4-V3 模型和运行追踪 |
 
-Markdown 固定顺序：
+双语 Markdown 固定语义章节：
 
 ```text
-## 1. 报告摘要
-## 2. 核心灾情指标
-## 3. 分区评估结果
-## 4. 证据支撑与一致性校验
-## 5. 证据局限与不可下结论事项
+报告摘要 / 核心灾情指标 / 分区评估 / 证据校验 / 局限 / 声明
 ```
 
 前端必须把 `excluded_claims` 作为“被排除结论”展示，不能混入核心灾情指标或最终结论。

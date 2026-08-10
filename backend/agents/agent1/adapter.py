@@ -17,7 +17,11 @@ MODEL_ENVIRONMENTS = {
 }
 
 ARTIFACT_TYPES = {
+    "building/damage_pixel_mask.png": "damage_pixel_mask",
+    "building/building_instance_mask.png": "building_instance_mask",
+    "building/damage_instance_mask.png": "damage_instance_mask",
     "building/damage_instance_color.png": "damage_instance_color",
+    "road/road_status_post_mask.png": "road_status_mask",
     "road/road_status_color.png": "road_status_color",
     "road/road_affected_probability.png": "road_affected_probability",
     "fusion/fused_color.png": "fused_color",

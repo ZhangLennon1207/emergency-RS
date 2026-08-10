@@ -1,15 +1,11 @@
-"""Canonical Agent3/4 cross-computer request contract.
-
-The current repository intentionally does not guess how Agent1's ledger maps
-to Wei Songchen's historical ``evidence_list``.  Callers must provide an
-already-normalized evidence list; the final mapper will be added after real,
-de-identified examples are reviewed.
-"""
+"""Canonical Agent3/4 cross-computer request contract."""
 
 from __future__ import annotations
 
 import re
 from typing import Any
+
+from .claim_type_mapper import FROZEN_CLAIM_TYPES
 
 
 AGENT34_CONTRACT_VERSION = "agent34-http-1.0"
@@ -77,11 +73,23 @@ def build_agent3_verify_payload(
         text = claim.get("claim")
         if not isinstance(text, str) or not text.strip():
             raise Agent34ContractError("each claim must contain non-empty claim text")
-        related = claim.get("related_evidence_ids", [])
-        if not isinstance(related, list) or not all(
-            isinstance(item, str) for item in related
+        claim_type = str(claim.get("claim_type") or "").strip()
+        if claim_type not in FROZEN_CLAIM_TYPES:
+            raise Agent34ContractError(f"unsupported claim_type: {claim_type or '<empty>'}")
+        language = str(claim.get("language") or "en").strip().lower()
+        if language != "en":
+            raise Agent34ContractError("Agent3 claims must use English text")
+        related = claim.get("related_evidence_ids")
+        if (
+            not isinstance(related, list)
+            or not related
+            or not all(isinstance(item, str) and item.strip() for item in related)
         ):
-            raise Agent34ContractError("related_evidence_ids must be a string list")
+            raise Agent34ContractError(
+                "related_evidence_ids must be a non-empty string list"
+            )
+        if len(related) != len(set(related)):
+            raise Agent34ContractError("related_evidence_ids must not contain duplicates")
         unknown = sorted(set(related) - evidence_ids)
         if unknown:
             raise Agent34ContractError(

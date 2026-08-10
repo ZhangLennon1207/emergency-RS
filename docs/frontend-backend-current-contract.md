@@ -1,7 +1,7 @@
 # 前端—总控后端当前可执行契约
 
-> 更新日期：2026-08-08
-> 当前实现范围：Agent1/Agent2 本地真实 Adapter；Agent3/Agent4 跨电脑 HTTP 契约和客户端已准备，但尚未进入 Job 编排。
+> 更新日期：2026-08-10
+> 当前实现范围：Agent1/Agent2 本地真实 Adapter；Agent3/Agent4 条件远程编排已实现，等待与魏松辰真实服务完成 SSH 联调。
 > 前端只访问总控后端，不直接访问任一模型或魏松辰的电脑。
 
 ## 1. 当前能力边界
@@ -9,9 +9,9 @@
 | 能力 | 当前状态 | 前端必须如何显示 |
 | --- | --- | --- |
 | Agent1 视觉证据 | 本地真实模型 Adapter | 可显示结构化统计、结果图和人工复核提示 |
-| Agent2 变化描述 | 本地真实 Qwen2.5-VL + LoRA Adapter | 显示英文描述和 `claim_list`，标记“尚未核验” |
-| Agent3 证据校验 | HTTP 契约/客户端已准备，尚未编排 | 显示 `skipped` 或“待接入”，不能显示已校验 |
-| Agent4 中文报告 | HTTP 契约/客户端已准备，尚未编排 | 显示 `skipped` 或“待接入”，不能显示正式报告 |
+| Agent2 变化描述 | 本地真实 Qwen2.5-VL + LoRA Adapter | 显示英文描述、`claim_type` 和证据关联；以 `verified` 判断是否已核验 |
+| Agent3 证据校验 | 配置远程服务后进入 Job 编排 | 显示 accepted/revised/rejected/pending 四组真实结果 |
+| Agent4 双语报告 | Agent3 成功后进入 Job 编排 | 分别显示 JSON、中文 Markdown 和英文 Markdown |
 
 只要响应中 `four_agent_pipeline_complete=false`，前端就不得使用“完整四智能体
 分析完成”等措辞。
@@ -39,7 +39,8 @@ Content-Type: multipart/form-data
   "job_id": "9f6...",
   "sample_id": "case-001",
   "contract_version": "draft-0.2",
-  "pipeline_version": "agent12-local-adapters-v1",
+  "pipeline_version": "competition-four-agent-v1",
+  "agent34_contract_version": "agent34-http-1.0",
   "status": "queued",
   "stage": "等待本地模型队列",
   "progress": 0,
@@ -90,15 +91,16 @@ GET /api/v1/dashboard
 ```
 
 接口返回 SQLite 全量任务的状态计数、最近 24 小时四小时分桶趋势和最近 4 条
-任务摘要。`counts.succeeded` 仅表示当前 Agent1+Agent2 范围成功；响应固定包含
-`four_agent_pipeline_complete=false`，前端不得将其显示为完整报告数量。
+任务摘要。`counts.succeeded` 表示该任务当前启用范围成功；是否为完整四阶段必须
+读取任务结果中的 `four_agent_pipeline_complete`，不能仅由状态推断。
 
 主要字段：
 
 ```json
 {
-  "scope": "agent1_agent2_local_only",
-  "four_agent_pipeline_complete": false,
+  "scope": "four_agent_remote_service",
+  "four_agent_pipeline_complete": true,
+  "review_required": true,
   "counts": {
     "total": 12,
     "active": 1,
@@ -126,10 +128,12 @@ GET /api/v1/jobs/{job_id}
 | `starting` | 否 | 准备任务 |
 | `running_agent1` | 否 | Agent1 正在提取视觉证据 |
 | `running_agent2` | 否 | Agent2 正在生成变化描述 |
+| `running_agent3` | 否 | Agent3 正在逐条核验证据 |
+| `running_agent4` | 否 | Agent4 正在生成双语报告 |
 | `assembling` | 否 | 后端正在整理统一结果 |
-| `succeeded` | 是 | 当前已接入的 Agent1/2 均成功 |
-| `partial_success` | 是 | Agent1/2 中只有一个成功 |
-| `failed` | 是 | Agent1/2 均失败 |
+| `succeeded` | 是 | 当前启用范围全部成功；继续检查是否为四阶段范围 |
+| `partial_success` | 是 | 至少一个智能体成功，后续或其他阶段失败/跳过 |
+| `failed` | 是 | 没有可用的智能体结果 |
 
 前端进度条使用后端返回的 `progress`，阶段文字使用 `stage`，不要自行根据时间
 推断模型是否完成。
@@ -154,7 +158,11 @@ GET /api/v1/jobs/{job_id}/result
     "input_pre": "/api/v1/jobs/9f6.../artifacts/input_pre",
     "input_post": "/api/v1/jobs/9f6.../artifacts/input_post",
     "agent1_fused_overlay": "/api/v1/jobs/9f6.../artifacts/agent1_fused_overlay",
-    "agent1_review_flags": "/api/v1/jobs/9f6.../artifacts/agent1_review_flags"
+    "agent1_review_flags": "/api/v1/jobs/9f6.../artifacts/agent1_review_flags",
+    "agent3_verified_evidence_package": "/api/v1/jobs/9f6.../artifacts/agent3_verified_evidence_package",
+    "agent4_platform_report": "/api/v1/jobs/9f6.../artifacts/agent4_platform_report",
+    "agent4_markdown_report_zh": "/api/v1/jobs/9f6.../artifacts/agent4_markdown_report_zh",
+    "agent4_markdown_report_en": "/api/v1/jobs/9f6.../artifacts/agent4_markdown_report_en"
   },
   "agent_runs": [],
   "agent1": {
@@ -194,27 +202,37 @@ GET /api/v1/jobs/{job_id}/result
         "claim_id": "C001",
         "claim": "...",
         "language": "en",
+        "claim_type": "building_damage_presence",
+        "claim_type_source": "keyword-rules-v1",
         "source": "agent2_description_postprocess",
         "source_text_span": {"start": 0, "end": 42},
-        "related_evidence_ids": []
+        "related_evidence_ids": ["SCENE_BUILDING_SUMMARY", "VIS_DAMAGE_MAP"]
       }
     ],
-    "verified": false,
-    "verification_status": "unverified",
-    "notice": "模型生成的变化描述，尚未经过 Agent3 证据校验。"
+    "verified": true,
+    "verification_status": "verified",
+    "notice": "Agent2 claims have been checked by Agent3."
   },
   "agent3": {
-    "status": "skipped",
-    "result": null,
-    "reason": "真实 Agent3/4 adapter 或远程服务尚未接入"
+    "status": "succeeded",
+    "source_version": "Agent3-V5.2",
+    "verified_evidence_package": {
+      "schema_version": "agent3_verified_package_v1.1",
+      "accepted_claims": [],
+      "revised_claims": [],
+      "rejected_claims": [],
+      "pending_claims": []
+    }
   },
   "agent4": {
-    "status": "skipped",
-    "result": null,
-    "reason": "真实 Agent3/4 adapter 或远程服务尚未接入"
+    "status": "succeeded",
+    "source_version": "Agent4-V3",
+    "platform_report_json": {},
+    "markdown_report_zh": "...",
+    "markdown_report_en": "..."
   },
-  "verification": null,
-  "report": null
+  "verification": {"verified_evidence_package": {}},
+  "report": {"platform_report_json": {}}
 }
 ```
 
@@ -260,6 +278,10 @@ Artifact 是否存在以结果中的 `artifacts` 映射为准，前端不要拼�
 | `agent2_raw_model_response` | Agent2 原始文本 | 调试/论文复现，不默认展示 |
 | `agent2_prompt_snapshot` | 本次 Prompt 快照 | 调试/论文复现，不默认展示 |
 | `agent2_run_manifest` | Agent2 运行追踪 | 调试/论文复现 |
+| `agent3_verified_evidence_package` | Agent3 脱敏后的可信证据包 | 核验结果查看/下载 |
+| `agent4_platform_report` | Agent4 结构化报告 JSON | 报告详情/下载 |
+| `agent4_markdown_report_zh` | 中文 Markdown 报告 | 中文报告查看/下载 |
+| `agent4_markdown_report_en` | 英文 Markdown 报告 | 英文报告查看/下载 |
 
 ## 7. 页面功能建议
 
@@ -273,7 +295,7 @@ Artifact 是否存在以结果中的 `artifacts` 映射为准，前端不要拼�
 ### 7.2 进度页
 
 - 使用 `stage`、`progress` 和 `agent_runs`。
-- Agent3/4 当前显示“待接入/跳过”，不能使用绿色完成状态。
+- 根据 `running_agent3`、`running_agent4` 和 `agent_runs` 显示真实阶段；只有对应 run 为 `succeeded` 才使用完成状态。
 - `partial_success` 时保留成功 Agent 的结果入口，同时展示 `errors`。
 
 ### 7.3 结果页
@@ -281,9 +303,9 @@ Artifact 是否存在以结果中的 `artifacts` 映射为准，前端不要拼�
 - 影像区：灾前、灾后、`agent1_fused_overlay`，并允许切换其他已返回图层。
 - Agent1 统计区：建筑数量、受损建筑、损伤比例、道路疑似受影响比例、场景风险。
 - 人工复核区：根据 `review_flags` 显示标记、原因和建议措辞。
-- Agent2 描述区：显示原始英文 `description` 和逐条 `claim_list`；固定显示“尚未经过 Agent3 核验”。
-- Agent3 区：当前置灰并显示 `reason`。
-- Agent4 区：当前置灰，不提供正式报告下载。
+- Agent2 描述区：显示原始英文 `description`、逐条 `claim_type` 和 Evidence ID；依据 `verified` 显示核验状态。
+- Agent3 区：显示 accepted/revised/rejected/pending；`skipped` 或 `failed` 时显示后端原因。
+- Agent4 区：成功时分别提供 JSON、中文 Markdown 和英文 Markdown；失败或跳过时不得生成占位报告。
 - 下载区：只渲染后端实际返回的 Artifact 链接。
 
 ## 8. 前端禁止做出的推断
@@ -312,14 +334,13 @@ Artifact 是否存在以结果中的 `artifacts` 映射为准，前端不要拼�
 `IMAGE_DECODE_FAILED`、`IMAGE_SIZE_MISMATCH`、`INVALID_SAMPLE_ID`、
 `JOB_NOT_FOUND`、`RESULT_NOT_READY` 和 `ARTIFACT_NOT_FOUND`。
 
-## 10. 后续 Agent3/4 接入原则
+## 10. Agent3/4 条件编排原则
 
-魏松辰服务接入后，前端接口保持不变：仍然只提交一次 Job、轮询同一个状态接口、
-读取同一个统一结果。总控后端负责：
+前端接口保持不变：仍然只提交一次 Job、轮询同一个状态接口、读取同一个统一结果。总控后端已经负责：
 
 1. 将 Agent1 ledger 映射为魏松辰真实 `evidence_list`。
 2. 把 Agent2 `claim_list` 与灾前/灾后图发送给 Agent3。
 3. 把 Agent3 `verified_evidence_package` 发送给 Agent4。
 4. 把 Agent3/4 的真实状态、核验结果和报告填入现有结果槽位。
 
-在取得 3～5 条魏松辰真实脱敏 `evidence_list` 前，第 1 步不得猜测实现。
+当前 mapper 版本为 `agent1-ledger-2.1-to-evidence-list-v1`。真实联调若发现字段语义变化，应升级 mapper 版本并重新运行契约测试，不在前端补偿后端字段。
