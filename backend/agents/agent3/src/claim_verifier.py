@@ -120,6 +120,34 @@ def _build_format_retry(
     return retry
 
 
+def _request_input(request):
+    value = request.get("input", {})
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+            return parsed if isinstance(parsed, dict) else {}
+        except Exception:
+            return {}
+    return {}
+
+
+def _constrain_evidence(check, allowed_ids):
+    """Prevent model output from inventing evidence or supporting no evidence."""
+    result = copy.deepcopy(check)
+    result["evidence_ids"] = [
+        str(item) for item in result.get("evidence_ids", [])
+        if str(item) in allowed_ids
+    ]
+    if result.get("support_status") == "supported" and not result["evidence_ids"]:
+        result["support_status"] = "unsupported"
+        suffix = "No valid input evidence ID supports this claim."
+        reason = str(result.get("reason", "")).strip()
+        result["reason"] = f"{reason} {suffix}".strip()
+    return result
+
+
 def _human_review_fallback(
     request,
     *,
@@ -315,13 +343,22 @@ class Agent3Verifier:
                 ),
             )
 
-        first = first_parsed[
+        request_input = _request_input(request)
+        evidence_context = request_input.get("structured_evidence", [])
+        allowed_ids = {
+            str(item.get("evidence_id"))
+            for item in evidence_context
+            if isinstance(item, dict) and item.get("evidence_id") is not None
+        }
+
+        first = _constrain_evidence(first_parsed[
             "verification"
-        ]
+        ], allowed_ids)
 
         policy = (
             decide_second_check(
-                first
+                first,
+                evidence_context=evidence_context,
             )
         )
 
@@ -369,6 +406,7 @@ class Agent3Verifier:
                         "verification"
                     ]
                 )
+                crop_check = _constrain_evidence(crop_check, allowed_ids)
 
             except Agent3ContractError:
                 return (
@@ -388,6 +426,13 @@ class Agent3Verifier:
                     )
                 )
 
+        actual_crop_region = request.get("crop_region")
+        if second_pass:
+            second_input = _request_input(second_pass)
+            localization = second_input.get("localization", {})
+            if isinstance(localization, dict) and localization.get("crop_bbox"):
+                actual_crop_region = localization["crop_bbox"]
+
         wrapped = (
             wrap_check_result(
                 first,
@@ -397,9 +442,7 @@ class Agent3Verifier:
                     self.config
                     .model_version
                 ),
-                crop_region=request.get(
-                    "crop_region"
-                ),
+                crop_region=actual_crop_region,
             )
         )
 

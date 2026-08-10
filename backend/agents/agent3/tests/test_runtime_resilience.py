@@ -93,6 +93,13 @@ REQUEST = {
 
             "claim_id":
                 "C_TEST",
+
+            "structured_evidence": [
+                {
+                    "evidence_id": "B0001",
+                    "confidence": 0.95,
+                }
+            ],
         }),
 
     "images":

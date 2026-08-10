@@ -14,21 +14,42 @@ SYSTEM = (
     "contradicted, exaggerated. Return strict JSON only."
 )
 
+BUILDING_CLAIM_TYPES = {
+    "building_damage_level",
+    "building_damage_presence",
+    "building_damage_quantity",
+}
+
+ROAD_CLAIM_TYPES = {"road_displacement", "road_impact"}
+
+
+def _image_order(claim_type: str, assets: dict[str, Path]) -> list[str]:
+    """Select only claim-relevant rasters while always retaining pre/post."""
+    if claim_type in BUILDING_CLAIM_TYPES:
+        candidates = (
+            "pre_image", "post_image", "damage_map", "fused_overlay",
+            "building_instance_mask",
+        )
+    elif claim_type in ROAD_CLAIM_TYPES:
+        candidates = (
+            "pre_image", "post_image", "road_status_map", "fused_overlay",
+        )
+    else:
+        candidates = ("pre_image", "post_image", "fused_overlay")
+    return [key for key in candidates if key in assets]
+
 
 def build_requests(payload: VerifyPayload, assets: dict[str, Path], work_dir: Path) -> list[dict[str, Any]]:
     evidence = {x.evidence_id: x for x in payload.evidence_list}
-    image_order = [k for k in (
-        "pre_image", "post_image", "damage_map", "fused_overlay",
-        "road_status_map", "building_instance_mask",
-    ) if k in assets]
-    images = [str(assets[k]) for k in image_order]
-    instruction = "\n".join(["<image>"] * len(images)) + (
-        "\nImages are supplied in image_order. Verify only the atomic claim. "
-        "Use structured and visual evidence conservatively. Do not use filenames "
-        "or external knowledge as evidence."
-    )
     result = []
     for claim in payload.claim_list:
+        image_order = _image_order(claim.claim_type, assets)
+        images = [str(assets[k]) for k in image_order]
+        instruction = "\n".join(["<image>"] * len(images)) + (
+            "\nImages are supplied in image_order. Verify only the atomic claim. "
+            "Use structured and visual evidence conservatively. Do not use filenames "
+            "or external knowledge as evidence."
+        )
         selected = [evidence[eid].model_dump() for eid in claim.related_evidence_ids if eid in evidence]
         bbox_by_id = {
             item["evidence_id"]: item["bbox"] for item in selected if item.get("bbox") is not None
@@ -54,4 +75,3 @@ def build_requests(payload: VerifyPayload, assets: dict[str, Path], work_dir: Pa
             },
         })
     return result
-

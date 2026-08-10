@@ -4,6 +4,9 @@ RISK_STATUSES = {
     "exaggerated",
 }
 
+LOW_CONFIDENCE_BOUND = 0.45
+UNCERTAINTY_UPPER_BOUND = 0.70
+
 
 def _recommended_inputs(
     evidence_ids,
@@ -47,6 +50,8 @@ def _recommended_inputs(
 
 def decide_second_check(
     verification,
+    *,
+    evidence_context=None,
 ):
     reasons = []
 
@@ -80,6 +85,24 @@ def decide_second_check(
         reasons.append(
             "missing_evidence_id"
         )
+
+    confidences = []
+    for item in evidence_context or []:
+        if not isinstance(item, dict) or item.get("confidence") is None:
+            continue
+        try:
+            value = float(item["confidence"])
+        except (TypeError, ValueError):
+            continue
+        if 0.0 <= value <= 1.0:
+            confidences.append(value)
+
+    if confidences:
+        minimum = min(confidences)
+        if minimum < LOW_CONFIDENCE_BOUND:
+            reasons.append("low_evidence_confidence")
+        elif minimum <= UNCERTAINTY_UPPER_BOUND:
+            reasons.append("evidence_confidence_uncertainty_interval")
 
     reasons = sorted(
         set(reasons)

@@ -6,6 +6,8 @@ from PIL import Image
 
 from backend.services.agent34_service.main import create_app
 from backend.services.agent34_service.settings import Settings
+from backend.services.agent34_service.request_builder import build_requests
+from backend.services.agent34_service.schemas import VerifyPayload
 
 
 def client(tmp_path):
@@ -95,3 +97,27 @@ def test_verify_rejects_bad_image(tmp_path):
     )
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "IMAGE_DECODE_FAILED"
+
+
+def test_request_builder_selects_claim_relevant_images(tmp_path):
+    assets = {
+        key: tmp_path / f"{key}.png"
+        for key in (
+            "pre_image", "post_image", "damage_map", "fused_overlay",
+            "road_status_map", "building_instance_mask",
+        )
+    }
+    payload = VerifyPayload.model_validate({
+        "job_id": "J1",
+        "sample_id": "S1",
+        "claim_list": [
+            {"claim_id": "B", "claim": "A building is damaged.",
+             "claim_type": "building_damage_presence"},
+            {"claim_id": "R", "claim": "A road is blocked.",
+             "claim_type": "road_impact"},
+        ],
+    })
+    building, road = build_requests(payload, assets, tmp_path)
+    assert "road_status_map" not in building["input"]["image_order"]
+    assert "building_instance_mask" not in road["input"]["image_order"]
+    assert "damage_map" not in road["input"]["image_order"]
