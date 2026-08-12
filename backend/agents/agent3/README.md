@@ -1,26 +1,25 @@
-# Agent3：证据可信校验（V5.2）
+# Agent3：证据约束核验智能体（Evidence-Grounded Verification Agent）
 
-当前正式版本为 `Agent3-V5.2.1`，能力名保持 `evidence_verification`；
-历史实验来源 `Agent4-V4` 仅记录在 manifest，不再作为 HTTP `source_version`。
+当前 Agent3 对应历史交接版本 `Agent4-V4`。负责人将证据对齐、规则兜底和校验代码提交到本目录。Claim 拆分属于 Agent2 Adapter 的正式输出后处理；Agent3 只消费 `claim_list` 并逐条校验。
 
-模块消费 Agent2 已拆分的英文 `claim_list`、Agent1 `evidence_list` 以及灾前/灾后
-影像。`claim_type` 必须来自 `schemas/claim_type_enum_v52.json` 的 12 类冻结枚举，
-不得在 Agent3 内通过关键词猜测。
+## 输入
 
-主要输出为 `3.1-runtime` check result 和
-`agent3_verified_package_v1.1`。最终证据包使用 `revised_claims`，不再使用历史
-`qualified_claims`；并补全 `task_info.scene_uid`、`atomic_claim` 和完整原 claim。
+- `evidence_list`
+- `claim_list`
+- Agent1结构化统计、Mask和Artifact引用
 
-`adapter.py` 提供仓库统一的 `run(payload, work_dir, config)`，HTTP 服务复用
-`Agent3Adapter`，同一批 claim 只加载一次模型。模型路径来自 `AGENT3_BASE_MODEL`
-和 `AGENT3_ADAPTER`，权重不进入仓库。
+## 主要输出
 
-当 deterministic policy 要求二次核验时，Runtime 使用私有
-`second_pass_context` 定位 evidence bbox、裁剪相关图片并构造第二次 V5.2 request；
-上下文不足或输出冲突时进入 pending/human review，不编造结论。
+- `check_result`
+- `verified_evidence_package`
+- 五类 `support_status`
 
-无模型测试：
+## 提交要求
 
-```powershell
-python -m pytest backend/agents/agent3/tests
-```
+1. 原始代码放入 `src/`。
+2. 在 `adapter.py` 中接入统一 `run()`。
+3. 输出必须为严格JSON，禁止Markdown包裹。
+4. 提供 supported、partially_supported、unsupported、contradicted、exaggerated 样例。
+5. 保留规则兜底和能力边界测试。
+
+正式字段以 `docs/api-contract.md` 的 `evidence_verification` 为准。

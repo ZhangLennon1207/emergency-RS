@@ -1,4 +1,8 @@
-# Emergency RS Agent Platform（应急遥感智能体平台）
+# 鉴微（JianWei）：面向高危场景的证据驱动多智能体评估系统
+
+**JianWei: An Evidence-Grounded Multi-Agent Framework for High-Risk Scenario Assessment**
+
+> 当前仓库已实现和验证的范围仅为双时相遥感灾情评估。其他高危场景属于后续可扩展方向，尚未完成实验验证。`Emergency-RS` 暂保留为仓库和开发代号。
 
 - 仓库建好了喵
 - 大家按下面的环境准备装一下github desktop
@@ -13,7 +17,7 @@ UI 专为向应急管理部门演示而设计，展示一个具备不确定性�
 - 图像-掩码-文本对齐的证据链工作流
 - AI 智能体报告中心，输出结构化灾情简报
 - 研判任务创建与四智能体执行状态演示
-- Agent3 证据可信校验和 Agent4 报告预览下载
+- Agent3 证据约束核验和 Agent4 报告预览下载
 - Mock 数据模式，便于在后端接入前独立开发和演示
 - 静态构建产物，支持 GitHub Pages、Vercel 或 Netlify 部署
 
@@ -35,6 +39,7 @@ UI 专为向应急管理部门演示而设计，展示一个具备不确定性�
 - [后端与智能体集成区说明](backend/README.md)
 - [前端—总控后端当前可执行契约](docs/frontend-backend-current-contract.md)
 - [Agent3/Agent4 跨电脑 HTTP 联调契约](docs/agent34-http-integration-contract.md)
+- [鉴微系统与四个 Agent 统一命名规范](docs/naming-conventions.md)
 - [接口契约区说明](contracts/README.md)
 
 ### 环境准备（每个成员只需做一次）

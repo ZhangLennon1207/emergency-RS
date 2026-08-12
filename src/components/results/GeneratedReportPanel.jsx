@@ -3,7 +3,10 @@ import StatusBadge from '../common/StatusBadge.jsx'
 
 function asText(item) {
   if (typeof item === 'string') return item
-  return item?.text ?? item?.claim ?? item?.finding ?? JSON.stringify(item)
+  const text = item?.text
+  if (typeof text === 'string') return text
+  if (text && typeof text === 'object') return text['zh-CN'] ?? text.zh ?? text['en-US'] ?? text.en ?? JSON.stringify(text)
+  return item?.claim ?? item?.finding ?? JSON.stringify(item)
 }
 
 function FindingGroup({ emptyText, items, title, tone }) {
@@ -17,7 +20,14 @@ function FindingGroup({ emptyText, items, title, tone }) {
   )
 }
 
-function GeneratedReportPanel({ onDownloadJson, onDownloadMarkdown, pendingReason = '', result }) {
+function GeneratedReportPanel({
+  onDownloadJson,
+  onDownloadMarkdown,
+  onDownloadMarkdownEn,
+  onDownloadMarkdownZh,
+  pendingReason = '',
+  result,
+}) {
   if (!result) {
     return (
       <section className="panel agent-result-empty">
@@ -48,6 +58,13 @@ function GeneratedReportPanel({ onDownloadJson, onDownloadMarkdown, pendingReaso
         </div>
       ) : null}
 
+      {result.reviewInfo?.human_review_required || Number(result.reportSummary?.pending_count ?? 0) > 0 ? (
+        <div className="report-schema-warning">
+          <AlertTriangle size={18} />
+          <span>报告包含待处理 Claim；这些内容只出现在局限说明中，不进入正式灾情结论。</span>
+        </div>
+      ) : null}
+
       <div className="report-metadata">
         <div><span>报告类型</span><strong>{result.reportType}</strong></div>
         <div><span>报告版本</span><strong>{result.reportVersion ?? '未标注'}</strong></div>
@@ -56,7 +73,7 @@ function GeneratedReportPanel({ onDownloadJson, onDownloadMarkdown, pendingReaso
 
       <div className="report-findings-grid">
         <FindingGroup emptyText="暂无已采纳结论" items={result.keyFindings} title="正式结论" tone="accepted" />
-        <FindingGroup emptyText="暂无附条件结论" items={result.qualifiedFindings} title="附条件结论" tone="qualified" />
+        <FindingGroup emptyText="暂无安全修订结论" items={result.revisedFindings} title="安全修订结论" tone="qualified" />
         <FindingGroup emptyText="暂无被排除结论" items={result.excludedClaims} title="排除项" tone="excluded" />
         <FindingGroup emptyText="未声明证据局限" items={result.limitations} title="证据局限" tone="limitations" />
       </div>
@@ -66,11 +83,16 @@ function GeneratedReportPanel({ onDownloadJson, onDownloadMarkdown, pendingReaso
         <p>{result.finalConclusion || '后端未提供最终研判文本。'}</p>
       </div>
 
-      {onDownloadMarkdown || onDownloadJson ? (
+      {onDownloadMarkdown || onDownloadMarkdownZh || onDownloadMarkdownEn || onDownloadJson ? (
         <div className="report-download-actions">
-          {onDownloadMarkdown ? (
-            <button className="button button-primary" onClick={onDownloadMarkdown} type="button">
-              <Download size={17} />下载 Markdown
+          {onDownloadMarkdownZh || onDownloadMarkdown ? (
+            <button className="button button-primary" onClick={onDownloadMarkdownZh ?? onDownloadMarkdown} type="button">
+              <Download size={17} />下载中文 Markdown
+            </button>
+          ) : null}
+          {onDownloadMarkdownEn ? (
+            <button className="button button-secondary" onClick={onDownloadMarkdownEn} type="button">
+              <Download size={17} />下载英文 Markdown
             </button>
           ) : null}
           {onDownloadJson ? (

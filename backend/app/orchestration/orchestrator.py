@@ -55,6 +55,146 @@ PRIVATE_REMOTE_KEYS = {
     "system",
 }
 
+DEFAULT_AGENT_SOURCE_VERSIONS = {
+    "agent3": "Agent3-V5.2.1",
+    "agent4": "Agent4-V3",
+}
+
+
+def _nonnegative_int(value: Any) -> int:
+    try:
+        return max(0, int(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _source_version(
+    payload: dict[str, Any] | None,
+    agent_code: str,
+    fallback: str | None = None,
+) -> str:
+    """Read a remote model/runtime version without depending on one wrapper shape."""
+
+    if isinstance(payload, dict):
+        direct_keys = (f"{agent_code}_version", "source_version", "model_version")
+        for key in direct_keys:
+            value = payload.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+
+        agent_metadata = payload.get(agent_code)
+        if isinstance(agent_metadata, dict):
+            value = agent_metadata.get("version")
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+
+        versions = payload.get("versions")
+        if isinstance(versions, dict):
+            value = versions.get(agent_code)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+            if isinstance(value, dict):
+                nested = value.get("version")
+                if isinstance(nested, str) and nested.strip():
+                    return nested.strip()
+
+        if agent_code == "agent3":
+            package = payload.get("verified_evidence_package")
+            if isinstance(package, dict):
+                audit_records = package.get("audit_records")
+                if isinstance(audit_records, list):
+                    for record in audit_records:
+                        if not isinstance(record, dict):
+                            continue
+                        value = record.get("model_version")
+                        if isinstance(value, str) and value.strip():
+                            return value.strip()
+
+    return fallback or DEFAULT_AGENT_SOURCE_VERSIONS[agent_code]
+
+
+def _review_summary(
+    *,
+    agent1_result: dict[str, Any],
+    agent1_ok: bool,
+    verified_package: dict[str, Any] | None,
+    platform_report: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Keep semantic review requests separate from output-contract failures."""
+
+    agent1_review = bool(
+        agent1_ok
+        and isinstance(agent1_result.get("review_flags"), dict)
+        and agent1_result["review_flags"].get("review_required")
+    )
+
+    package = verified_package if isinstance(verified_package, dict) else {}
+    pending = package.get("pending_claims")
+    pending_items = pending if isinstance(pending, list) else []
+    summary = package.get("summary")
+    summary = summary if isinstance(summary, dict) else {}
+    declared_pending = _nonnegative_int(summary.get("pending"))
+    pending_count = max(declared_pending, len(pending_items))
+
+    human_review_claim_count = 0
+    model_output_invalid_count = 0
+    for claim in pending_items:
+        if not isinstance(claim, dict):
+            continue
+        state = str(claim.get("resolution_state") or "").strip().lower()
+        failure_category = str(claim.get("failure_category") or "").strip().lower()
+        if state == "model_output_invalid" or failure_category == "format_contract":
+            model_output_invalid_count += 1
+        elif state == "human_review_required" or claim.get("human_review_required") is True:
+            human_review_claim_count += 1
+
+    report = platform_report if isinstance(platform_report, dict) else {}
+    review_info = report.get("review_info")
+    review_info = review_info if isinstance(review_info, dict) else {}
+    explicit_human_present = "human_review_claim_count" in review_info
+    explicit_invalid_present = "model_output_invalid_count" in review_info
+    explicit_human_count = _nonnegative_int(review_info.get("human_review_claim_count"))
+    explicit_invalid_count = _nonnegative_int(review_info.get("model_output_invalid_count"))
+    human_review_claim_count = max(human_review_claim_count, explicit_human_count)
+    model_output_invalid_count = max(
+        model_output_invalid_count, explicit_invalid_count
+    )
+
+    classified_pending = human_review_claim_count + model_output_invalid_count
+    other_pending_claim_count = max(0, pending_count - classified_pending)
+
+    # Older reports exposed only a Boolean. Use it only when there is no detailed
+    # Agent3 pending state that could actually be a format-contract failure.
+    report_human_review = bool(review_info.get("human_review_required"))
+    if (
+        report_human_review
+        and not pending_items
+        and not explicit_human_present
+        and not explicit_invalid_present
+        and human_review_claim_count == 0
+        and model_output_invalid_count == 0
+    ):
+        human_review_claim_count = 1
+
+    human_review_required = agent1_review or human_review_claim_count > 0
+    attention_required = bool(
+        human_review_required
+        or model_output_invalid_count > 0
+        or other_pending_claim_count > 0
+        or review_info.get("attention_required")
+    )
+    return {
+        "attention_required": attention_required,
+        "review_required": human_review_required,
+        "agent1_review_required": agent1_review,
+        "human_review_required": human_review_required,
+        "human_review_claim_count": human_review_claim_count,
+        "model_output_invalid": model_output_invalid_count > 0,
+        "model_output_invalid_count": model_output_invalid_count,
+        "pending_claim_count": pending_count,
+        "other_pending_claim_count": other_pending_claim_count,
+    }
+
 
 def load_adapter(agent_code: str) -> Adapter:
     entrypoint = ENTRYPOINTS[agent_code]
@@ -263,6 +403,7 @@ class JobOrchestrator:
         job_root: Path,
         agent1_result: dict[str, Any],
         agent2_result: dict[str, Any],
+        source_version: str | None = None,
     ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
         request, optional_assets, normalized_claims = self._prepare_agent3_request(
             job_id=str(job["job_id"]),
@@ -290,35 +431,40 @@ class JobOrchestrator:
         package = sanitized["verified_evidence_package"]
         artifact_path = job_root / "agent3" / "verified_evidence_package.json"
         self._write_json_artifact(artifact_path, package)
-        artifact_records = [{
-            "artifact_type": "verified_evidence_package",
-            "path": artifact_path.relative_to(job_root).as_posix(),
-        }]
-        for remote in sanitized.get("artifacts", []):
-            if not isinstance(remote, dict) or remote.get("artifact_type") != "second_check_crop":
+        local_artifacts = [
+            {
+                "artifact_type": "verified_evidence_package",
+                "path": artifact_path.relative_to(job_root).as_posix(),
+            }
+        ]
+        # Remote crop URLs are private service URLs. Copy every permitted crop
+        # into the controller-owned Artifact Store so the public job response
+        # never exposes the model host, token, or private runtime directory.
+        for index, remote_artifact in enumerate(response.get("artifacts", []), start=1):
+            if not isinstance(remote_artifact, dict):
                 continue
-            claim_id = str(remote.get("claim_id") or "")
-            file_name = str(remote.get("file_name") or "")
-            download_url = str(remote.get("download_url") or "")
-            if not claim_id or not file_name or Path(file_name).name != file_name:
-                raise Agent34ServiceError("REMOTE_ARTIFACT_INVALID", "Agent3 artifact metadata is invalid")
-            local = job_root / "agent3" / "second_check" / claim_id / file_name
-            client.download_artifact(download_url=download_url, destination=local)
-            artifact_records.append({
-                "artifact_type": f"second_check_{claim_id}_{Path(file_name).stem}",
-                "path": local.relative_to(job_root).as_posix(),
-                "claim_id": claim_id,
-                "media_type": remote.get("media_type", "image/png"),
-                "sha256": remote.get("sha256"),
-            })
+            download_url = remote_artifact.get("download_url")
+            claim_id = str(remote_artifact.get("claim_id") or "")
+            file_name = str(remote_artifact.get("file_name") or "")
+            if not isinstance(download_url, str) or not claim_id or not file_name:
+                continue
+            destination = job_root / "agent3" / "second_check" / claim_id / file_name
+            client.download_artifact(download_url=download_url, destination=destination)
+            local_artifacts.append(
+                {
+                    "artifact_type": f"second_check_crop_{index}",
+                    "claim_id": claim_id,
+                    "file_name": file_name,
+                    "path": destination.relative_to(job_root).as_posix(),
+                }
+            )
         result = {
             **sanitized,
             "agent_code": "agent3",
             "capability": "evidence_verification",
-            "source_version": "Agent3-V5.2.1",
+            "source_version": _source_version(response, "agent3", source_version),
             "status": "succeeded",
-            "display_name": "证据约束核验智能体",
-            "artifacts": artifact_records,
+            "artifacts": local_artifacts,
         }
         json.dumps(result, ensure_ascii=False)
         return result, normalized_claims
@@ -331,6 +477,7 @@ class JobOrchestrator:
         sample_id: str,
         job_root: Path,
         verified_evidence_package: dict[str, Any],
+        source_version: str | None = None,
     ) -> dict[str, Any]:
         request = build_agent4_report_payload(
             job_id=job_id,
@@ -364,8 +511,7 @@ class JobOrchestrator:
             **sanitized,
             "agent_code": "agent4",
             "capability": "report_generation",
-            "source_version": "Agent4-V3",
-            "display_name": "报告生成智能体",
+            "source_version": _source_version(response, "agent4", source_version),
             "status": "succeeded",
             "artifacts": [
                 {
@@ -437,12 +583,23 @@ class JobOrchestrator:
         agent4_ok: bool | None = None
         agent3_result: dict[str, Any] = {}
         agent4_result: dict[str, Any] = {}
+        remote_versions: dict[str, str] = {}
         remote_skip_reason = "Agent3/4 远程服务尚未配置"
 
         if remote_configured and agent1_ok and agent2_ok:
             client = None
             try:
                 client = self.agent34_client_factory(self.settings)
+                if hasattr(client, "health"):
+                    try:
+                        remote_health = client.health()
+                    except Exception:
+                        remote_health = None
+                    if isinstance(remote_health, dict):
+                        remote_versions = {
+                            code: _source_version(remote_health, code)
+                            for code in ("agent3", "agent4")
+                        }
                 self.store.update_job(
                     job_id,
                     status="running_agent3",
@@ -457,6 +614,7 @@ class JobOrchestrator:
                         job_root=job_root,
                         agent1_result=agent1_result,
                         agent2_result=agent2_result,
+                        source_version=remote_versions.get("agent3"),
                     )
                     agent2_result = dict(agent2_result)
                     agent2_result["claim_list"] = normalized_claims
@@ -491,6 +649,7 @@ class JobOrchestrator:
                             verified_evidence_package=agent3_result[
                                 "verified_evidence_package"
                             ],
+                            source_version=remote_versions.get("agent4"),
                         )
                         agent4_ok = True
                     except Exception as error:
@@ -561,11 +720,12 @@ class JobOrchestrator:
             status, stage = "succeeded", "Agent1/2 本地分析完成"
         elif all(outcome is True for outcome in (agent1_ok, agent2_ok, agent3_ok, agent4_ok)):
             status = "succeeded"
-            stage = (
-                "四智能体分析完成，存在待人工复核项"
-                if result["review_required"]
-                else "四智能体分析与报告生成完成"
-            )
+            if result["review_required"]:
+                stage = "四智能体分析完成，存在待人工复核项"
+            elif result["attention_required"]:
+                stage = "四智能体分析完成，存在待处理项"
+            else:
+                stage = "四智能体分析与报告生成完成"
         elif any(outcome is True for outcome in (agent1_ok, agent2_ok, agent3_ok, agent4_ok)):
             status, stage = "partial_success", "部分智能体完成，已保留可用结果"
         else:
@@ -624,31 +784,15 @@ class JobOrchestrator:
         verified_package = (
             agent3_result.get("verified_evidence_package") if agent3_ok else None
         )
-        pending_count = 0
-        if isinstance(verified_package, dict):
-            summary = verified_package.get("summary")
-            if isinstance(summary, dict):
-                pending_count = int(summary.get("pending") or 0)
-            elif isinstance(verified_package.get("pending_claims"), list):
-                pending_count = len(verified_package["pending_claims"])
-        agent1_review = bool(
-            agent1_ok
-            and isinstance(agent1_result.get("review_flags"), dict)
-            and agent1_result["review_flags"].get("review_required")
+        platform_report = (
+            agent4_result.get("platform_report_json") if agent4_ok else None
         )
-        report_review = False
-        if agent4_ok:
-            platform_report = agent4_result.get("platform_report_json")
-            review_info = (
-                platform_report.get("review_info")
-                if isinstance(platform_report, dict)
-                else None
-            )
-            report_review = bool(
-                isinstance(review_info, dict)
-                and review_info.get("human_review_required")
-            )
-        review_required = agent1_review or pending_count > 0 or report_review
+        review_summary = _review_summary(
+            agent1_result=agent1_result,
+            agent1_ok=agent1_ok,
+            verified_package=verified_package,
+            platform_report=platform_report,
+        )
 
         four_agent_complete = all(
             outcome is True for outcome in (agent1_ok, agent2_ok, agent3_ok, agent4_ok)
@@ -671,7 +815,11 @@ class JobOrchestrator:
                 else "agent1_agent2_local_only"
             ),
             "four_agent_pipeline_complete": four_agent_complete,
-            "review_required": review_required,
+            # review_required is retained for existing clients, but now means
+            # semantic/manual review only. Use attention_required for any issue.
+            "review_required": review_summary["review_required"],
+            "attention_required": review_summary["attention_required"],
+            "review_summary": review_summary,
             "artifacts": artifacts,
             "agent_runs": runs,
             "agent1": {

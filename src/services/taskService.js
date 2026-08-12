@@ -1,10 +1,10 @@
 const STORAGE_KEY = 'emergency-rs-demo-tasks'
 
 export const agentDefinitions = [
-  { id: 'agent1', name: '时空视觉证据感知', shortName: '视觉感知' },
-  { id: 'agent2', name: '灾情变化描述生成', shortName: '描述生成' },
-  { id: 'agent3', name: '证据可信校验', shortName: '证据校验' },
-  { id: 'agent4', name: '可信灾情报告生成', shortName: '报告生成' },
+  { id: 'agent1', name: '视觉感知智能体', shortName: '视觉感知' },
+  { id: 'agent2', name: '变化理解智能体', shortName: '变化理解' },
+  { id: 'agent3', name: '证据约束核验智能体', shortName: '证据核验' },
+  { id: 'agent4', name: '报告生成智能体', shortName: '报告生成' },
 ]
 
 const damageLevels = [
@@ -213,8 +213,8 @@ export function buildVerificationPayload(task) {
 
   return {
     task_id: task.id,
-    source_agent_id: 'agent4',
-    source_version: 'Agent4-V4',
+    source_agent_id: 'agent3',
+    source_version: 'Agent3-V5.2.1',
     check_result: {
       task_id: task.id,
       overall_status: 'warning',
@@ -239,8 +239,9 @@ export function buildVerificationPayload(task) {
       task_id: task.id,
       overall_status: 'warning',
       accepted_claims: ['claim-1'],
-      qualified_claims: [],
+      revised_claims: [],
       rejected_claims: ['claim-2', 'claim-3'],
+      pending_claims: [],
       source_evidence_ids: ['building_mask', 'damage_mask', 'damage_statistics'],
       limitations: ['当前演示任务未包含可验证道路通行状态的证据。'],
     },
@@ -280,8 +281,8 @@ export function buildReportPayload(task) {
 
   return {
     task_id: task.id,
-    source_agent_id: 'agent5',
-    source_version: 'Agent5-V2',
+    source_agent_id: 'agent4',
+    source_version: 'Agent4-V3',
     platform_report_json: {
       task_id: task.id,
       report_type: 'remote_sensing_disaster_assessment',
@@ -289,7 +290,7 @@ export function buildReportPayload(task) {
       overall_status: 'warning',
       data_basis: {
         accepted_claims: 1,
-        qualified_claims: 0,
+        revised_claims: 0,
         rejected_claims: 2,
       },
       key_findings: ['研究区域中部与东南方向存在连续建筑损毁斑块。'],
@@ -301,6 +302,28 @@ export function buildReportPayload(task) {
       limitations: ['当前证据无法确认道路完全中断、人员伤亡、经济损失、政府响应和救援状态。'],
       final_conclusion: '现有遥感证据支持研究区存在局部建筑损毁，建议对重点区域开展人工复核。',
     },
-    markdown_report: buildReport(task),
+    markdown_report_zh: buildReport(task),
+    markdown_report_en: `# Preliminary Remote-Sensing Assessment Report
+
+## 1. Executive Summary
+
+Task ${task.id} contains a preliminary evidence-grounded assessment.
+
+## 2. Key Disaster Indicators
+
+One localized building-damage finding is retained after verification.
+
+## 3. Regional Assessment
+
+The current evidence supports localized damage rather than scene-wide destruction.
+
+## 4. Evidence Support and Consistency Check
+
+Only accepted and revised claims are included in report findings.
+
+## 5. Limitations and Non-conclusive Items
+
+Road interruption, casualties, economic losses, and response status cannot be concluded from current evidence.
+`,
   }
 }

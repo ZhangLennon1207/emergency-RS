@@ -1,4 +1,4 @@
-# Emergency RS 后端架构实施方案
+# 鉴微（JianWei）后端架构实施方案
 
 > 本文是数据库、对象存储、认证和云部署的长期生产化方案，不是当前Agent成员的交付清单。现阶段团队上传代码请以 `backend/README.md`、`backend/agents/README.md` 和 `docs/team-collaboration-guide.md` 为准；先完成四Agent统一接口与单机集成，再逐步实施本文中的数据库和云服务。
 

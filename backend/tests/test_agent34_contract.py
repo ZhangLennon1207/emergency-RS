@@ -11,6 +11,7 @@ from backend.app.integration.agent34_contract import (
     build_agent3_verify_payload,
     build_agent4_report_payload,
 )
+from backend.app.orchestration.orchestrator import _review_summary, _source_version
 
 
 def _evidence():
@@ -160,3 +161,91 @@ def test_remote_error_is_sanitized():
 
     assert caught.value.code == "EMPTY_CLAIM_LIST"
     assert "private-token" not in str(caught.value)
+
+
+def test_remote_health_version_is_used_for_agent3_runtime():
+    health = {
+        "agent3": {"version": "Agent3-V5.2.1"},
+        "agent4": {"version": "Agent4-V3"},
+    }
+
+    assert _source_version(health, "agent3") == "Agent3-V5.2.1"
+    assert _source_version(health, "agent4") == "Agent4-V3"
+
+
+def test_format_failure_is_not_mislabeled_as_human_review():
+    verified_package = {
+        "summary": {"accepted": 0, "revised": 0, "rejected": 0, "pending": 2},
+        "pending_claims": [
+            {
+                "claim_id": "C001",
+                "resolution_state": "model_output_invalid",
+                "human_review_required": False,
+                "failure_category": "format_contract",
+            },
+            {
+                "claim_id": "C002",
+                "resolution_state": "human_review_required",
+                "human_review_required": True,
+            },
+        ],
+    }
+    # Agent4-V3 historically turns every pending claim into a report-level
+    # human_review_required Boolean. Agent3's detailed state remains authoritative.
+    platform_report = {"review_info": {"human_review_required": True}}
+
+    summary = _review_summary(
+        agent1_result={},
+        agent1_ok=True,
+        verified_package=verified_package,
+        platform_report=platform_report,
+    )
+
+    assert summary["attention_required"] is True
+    assert summary["human_review_required"] is True
+    assert summary["human_review_claim_count"] == 1
+    assert summary["model_output_invalid"] is True
+    assert summary["model_output_invalid_count"] == 1
+    assert summary["pending_claim_count"] == 2
+
+
+def test_only_format_failure_requires_attention_not_human_review():
+    summary = _review_summary(
+        agent1_result={},
+        agent1_ok=True,
+        verified_package={
+            "summary": {"pending": 1},
+            "pending_claims": [
+                {
+                    "claim_id": "C001",
+                    "resolution_state": "model_output_invalid",
+                    "human_review_required": False,
+                    "failure_category": "format_contract",
+                }
+            ],
+        },
+        platform_report={"review_info": {"human_review_required": True}},
+    )
+
+    assert summary["attention_required"] is True
+    assert summary["review_required"] is False
+    assert summary["human_review_claim_count"] == 0
+    assert summary["model_output_invalid_count"] == 1
+
+
+def test_explicit_zero_human_review_count_overrides_legacy_boolean():
+    summary = _review_summary(
+        agent1_result={},
+        agent1_ok=True,
+        verified_package={"summary": {"pending": 0}, "pending_claims": []},
+        platform_report={
+            "review_info": {
+                "human_review_required": True,
+                "human_review_claim_count": 0,
+                "model_output_invalid_count": 0,
+            }
+        },
+    )
+
+    assert summary["human_review_required"] is False
+    assert summary["attention_required"] is False

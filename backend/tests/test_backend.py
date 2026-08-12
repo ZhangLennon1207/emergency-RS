@@ -54,6 +54,29 @@ def create_store_job(
     )
 
 
+def test_service_and_capabilities_use_frozen_jianwei_names(tmp_path: Path) -> None:
+    settings = make_settings(tmp_path)
+    app = create_app(settings, start_worker=False)
+    with TestClient(app) as client:
+        service = client.get("/").json()
+        assert service["service"] == "JianWei Multi-Agent Integration API"
+        assert service["system_name"] == "鉴微"
+        assert service["system_name_en"] == "JianWei"
+        assert (
+            service["validated_scope"]
+            == "bi_temporal_remote_sensing_disaster_assessment"
+        )
+
+        capabilities = client.get("/api/v1/health").json()["capabilities"]
+        assert capabilities["agent1"]["display_name"] == "视觉感知智能体"
+        assert capabilities["agent2"]["display_name"] == "变化理解智能体"
+        assert capabilities["agent3"]["display_name"] == "证据约束核验智能体"
+        assert capabilities["agent4"]["display_name"] == "报告生成智能体"
+        assert capabilities["agent3"]["display_name_en"] == (
+            "Evidence-Grounded Verification Agent"
+        )
+
+
 def test_create_read_and_input_artifact(tmp_path: Path) -> None:
     settings = make_settings(tmp_path)
     app = create_app(settings, start_worker=False)
@@ -157,6 +180,8 @@ def test_dashboard_aggregates_sqlite_job_state(tmp_path: Path) -> None:
         "total": 2,
         "active": 1,
         "review_required": 1,
+        "attention_required": 1,
+        "model_output_invalid": 0,
         "succeeded": 1,
         "partial_success": 0,
         "failed": 0,
@@ -426,6 +451,13 @@ def test_orchestrator_runs_remote_agent3_and_agent4_when_configured(
     class FakeAgent34Client:
         closed = False
 
+        def health(self):
+            return {
+                "status": "ok",
+                "agent3": {"version": "Agent3-V5.2.1"},
+                "agent4": {"version": "Agent4-V3"},
+            }
+
         def verify(self, **kwargs):
             seen["verify"] = kwargs
             claim = kwargs["payload"]["claim_list"][0]
@@ -437,6 +469,17 @@ def test_orchestrator_runs_remote_agent3_and_agent4_when_configured(
             assert kwargs["building_instance_mask"].is_file()
             return {
                 "contract_version": "agent34-http-1.0",
+                "artifacts": [
+                    {
+                        "artifact_type": "second_check_crop",
+                        "claim_id": "C001",
+                        "file_name": "pre_image_crop.png",
+                        "download_url": (
+                            "/api/v1/artifacts/test-job/sample-001/second_check/"
+                            "C001/pre_image_crop.png"
+                        ),
+                    }
+                ],
                 "verified_evidence_package": {
                     "schema_version": "agent3_verified_package_v1.1",
                     "task_info": {"scene_uid": "sample-001"},
@@ -503,6 +546,8 @@ def test_orchestrator_runs_remote_agent3_and_agent4_when_configured(
     assert job is not None
     assert job["status"] == "succeeded"
     assert job["result"]["four_agent_pipeline_complete"] is True
+    assert job["result"]["agent3"]["source_version"] == "Agent3-V5.2.1"
+    assert job["result"]["agent4"]["source_version"] == "Agent4-V3"
     assert job["result"]["scope"] == "four_agent_remote_service"
     assert job["result"]["agent2"]["verified"] is True
     claim = job["result"]["agent2"]["claim_list"][0]
@@ -512,6 +557,22 @@ def test_orchestrator_runs_remote_agent3_and_agent4_when_configured(
     assert job["result"]["agent4"]["status"] == "succeeded"
     assert "raw_first_output" not in json.dumps(job["result"])
     assert "agent3_verified_evidence_package" in job["result"]["artifacts"]
+    crop_key = "agent3_second_check_crop_1"
+    assert crop_key in job["result"]["artifacts"]
+    assert job["result"]["artifacts"][crop_key].startswith(
+        "/api/v1/jobs/test-job/artifacts/"
+    )
+    assert "/api/v1/artifacts/" not in json.dumps(job["result"])
+    crop_path = (
+        settings.runtime_root
+        / "jobs"
+        / "test-job"
+        / "agent3"
+        / "second_check"
+        / "C001"
+        / "pre_image_crop.png"
+    )
+    assert crop_path.read_bytes() == image_bytes()
     assert "agent4_platform_report" in job["result"]["artifacts"]
     assert "agent4_markdown_report_zh" in job["result"]["artifacts"]
     assert fake_client.closed is True

@@ -33,13 +33,17 @@ function EvidenceVerificationPanel({ result, compact = false, pendingReason = ''
   const riskCount =
     (counts.unsupported ?? 0) +
     (counts.contradicted ?? 0) +
-    (counts.exaggerated ?? 0)
+    (counts.exaggerated ?? 0) +
+    (counts.human_review_required ?? 0) +
+    (counts.model_output_invalid ?? 0)
   const visibleClaims = result.claimChecks.filter((claim) =>
     claimFilter === 'risk'
-      ? ['unsupported', 'contradicted', 'exaggerated'].includes(claim.status)
+      ? ['unsupported', 'contradicted', 'exaggerated', 'human_review_required', 'model_output_invalid'].includes(claim.status)
       : true,
   )
   const verifiedPackage = result.verifiedEvidencePackage
+  const humanReviewCount = result.attentionSummary?.humanReviewClaimCount ?? 0
+  const modelOutputInvalidCount = result.attentionSummary?.modelOutputInvalidCount ?? 0
 
   return (
     <section className="panel verification-panel">
@@ -58,6 +62,23 @@ function EvidenceVerificationPanel({ result, compact = false, pendingReason = ''
           <span>正式报告只接收“已采纳”和“附条件采纳”的结论。</span>
         </div>
       </div>
+
+      {humanReviewCount || modelOutputInvalidCount ? (
+        <div className="verification-attention-grid">
+          {humanReviewCount ? (
+            <div className="attention-human">
+              <AlertTriangle size={18} />
+              <span><strong>{humanReviewCount} 条需人工复核</strong>证据语义仍不确定或存在冲突。</span>
+            </div>
+          ) : null}
+          {modelOutputInvalidCount ? (
+            <div className="attention-format">
+              <AlertTriangle size={18} />
+              <span><strong>{modelOutputInvalidCount} 条模型输出异常</strong>输出未满足JSON契约，不等同于人工复核。</span>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="verification-counts">
         {statusOrder.map(([status, label]) => (
@@ -106,9 +127,10 @@ function EvidenceVerificationPanel({ result, compact = false, pendingReason = ''
       {!compact && verifiedPackage ? (
         <div className="verified-package">
           <div><span>已采纳</span><strong>{verifiedPackage.acceptedClaims.length}</strong></div>
-          <div><span>附条件采纳</span><strong>{verifiedPackage.qualifiedClaims.length}</strong></div>
+          <div><span>安全修订</span><strong>{verifiedPackage.revisedClaims.length}</strong></div>
           <div><span>已排除</span><strong>{verifiedPackage.rejectedClaims.length}</strong></div>
-          <p>Agent4 将只使用已采纳与附条件采纳结论生成正式报告。</p>
+          <div><span>待处理</span><strong>{verifiedPackage.pendingClaims.length}</strong></div>
+          <p>Agent4 只能使用已采纳与安全修订结论生成正式报告；排除项和待处理项只能进入局限说明。</p>
         </div>
       ) : null}
 
@@ -126,7 +148,7 @@ function EvidenceVerificationPanel({ result, compact = false, pendingReason = ''
 
       <footer className="result-provenance">
         <span>当前能力：Agent3</span>
-        <span>历史模型版本：{result.sourceVersion}</span>
+        <span>运行时版本：{result.sourceVersion}</span>
       </footer>
     </section>
   )

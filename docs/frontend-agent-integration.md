@@ -445,7 +445,8 @@ GET /api/v1/jobs/{job_id}
     {
       "agent_code": "agent1",
       "capability": "visual_evidence",
-      "display_name": "时空视觉证据感知智能体",
+      "display_name": "视觉感知智能体",
+      "display_name_en": "Visual Perception Agent",
       "status": "succeeded",
       "started_at": "2026-07-29T10:00:00+08:00",
       "finished_at": "2026-07-29T10:01:32+08:00",

@@ -4,6 +4,7 @@
   "display_name": "报告生成智能体",
   "source_version": "Agent4-V3",
   "historical_source_version": "Agent5-V2",
+  "display_name_en": "Report Generation Agent",
   "entrypoint": "backend.agents.agent4.adapter:run",
   "owner": "weimiao828",
   "status": "submitted"

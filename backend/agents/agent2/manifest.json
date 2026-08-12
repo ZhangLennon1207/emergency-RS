@@ -1,7 +1,8 @@
 {
   "agent_code": "agent2",
   "capability": "change_description",
-  "display_name": "灾前灾后变化描述智能体",
+  "display_name": "变化理解智能体",
+  "display_name_en": "Change Understanding Agent",
   "source_version": "agent2-qwen25vl-lora-inference-v1",
   "entrypoint": "backend.agents.agent2.adapter:run",
   "owner": "AutigerBai",

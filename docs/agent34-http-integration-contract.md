@@ -9,7 +9,7 @@
 
 | 当前系统 | capability | 历史模型版本 |
 | --- | --- | --- |
-| Agent3 | `evidence_verification` | Agent3-V5.2.1 |
+| Agent3 | `evidence_verification` | Agent3-V5.2.1 runtime（V5.2 checkpoint） |
 | Agent4 | `report_generation` | Agent4-V3 |
 
 新 API、GitHub 目录、日志和前端统一使用 Agent3/Agent4。历史配置、权重目录和实验记录可以保留 Agent4/Agent5 文件名，通过 `source_version` 追踪，不做全局重命名。
@@ -62,19 +62,21 @@ Agent4 必须保留：
 
 ## 3. 魏松辰模型电脑的环境变量
 
-所有真实路径仅写入 GPU 主机未跟踪的 `.env.agent34`。仓库只保留变量名和占位符：
+`$PROJECT` 代表魏松辰当前已验证的 AutoDL 项目根目录。下面路径必须用实际存在的 POSIX 路径替换，不能把示例文本原样运行。
 
 ```bash
-AGENT34_PROJECT_ROOT=<GPU主机上的仓库根目录>
-AGENT34_PYTHON_BIN=<GPU主机上的Python解释器>
-AGENT34_WORK_ROOT=<GPU主机上的私有请求目录>
-AGENT34_PID_FILE=<GPU主机上的私有PID文件>
-AGENT34_LOG_FILE=<GPU主机上的私有日志文件>
-AGENT34_SHARED_TOKEN=<双方私下交换的高强度随机Token>
-AGENT3_BASE_MODEL=<Agent3基座模型目录>
-AGENT3_ADAPTER=<Agent3-V5.2.1 LoRA目录>
-AGENT4_BASE_MODEL=<Agent4基座模型目录>
-AGENT4_ADAPTER=<Agent4-V3 LoRA目录>
+export PROJECT=/root/autodl-tmp/llama_factory_workspace
+
+export AGENT34_BASE_MODEL_PATH=<Qwen2.5-VL-7B-Instruct实际目录>
+export AGENT3_PREDICT_CONFIG=$PROJECT/configs/current/agent3/agent3_v4_baseline_predict.yaml
+export AGENT3_LORA_PATH=$PROJECT/models_current/agent3_v4_baseline_lora
+export AGENT4_PREDICT_CONFIG=$PROJECT/configs/current/agent4/agent4_v2_baseline_predict.yaml
+export AGENT4_LORA_PATH=$PROJECT/models_current/agent4_v2_baseline_lora
+export AGENT34_WORK_ROOT=$PROJECT/runtime/agent34_service
+
+export AGENT34_SHARED_TOKEN=<双方私下交换的高强度随机Token>
+export AGENT34_MAX_CONCURRENCY=1
+export AGENT34_PORT=8100
 ```
 
 Token 只能私下传递，写入未跟踪的 `.env` 或 shell 环境，不得发到群聊、文档、GitHub、日志和截图。
@@ -106,7 +108,22 @@ AGENT34_READ_TIMEOUT_SECONDS=900
 
 `900` 秒是首次联调临时值；完成冷启动和 warm benchmark 后再缩短。
 
-服务固定只监听 `127.0.0.1:8100`，不提供 `0.0.0.0` 直接连接方式。跨电脑联调统一走 SSH 隧道，避免将无 TLS 的模型端口暴露到公网。
+### 3.2 仅在同一可信局域网使用直接连接
+
+魏松辰：
+
+```bash
+python -m uvicorn backend.services.agent34_service.main:app \
+  --host 0.0.0.0 --port 8100 --workers 1
+```
+
+AutigerBai：
+
+```text
+AGENT34_BASE_URL=http://<WEI_LAN_IP>:8100
+```
+
+只允许专用/私人网络防火墙规则。不要把无 TLS 的 8100 端口直接暴露到公网。
 
 ## 4. 冻结接口
 
@@ -182,7 +199,7 @@ Authorization: Bearer <AGENT34_SHARED_TOKEN>
 1. 校验双图可解码且成对。
 2. 校验 `job_id`、`sample_id`、claim/evidence ID 唯一。
 3. HTTP 一次接收完整 `claim_list`。
-4. Runtime 内部按 Agent3-V5.2.1 稳定逻辑逐 claim 调用。
+4. Runtime 内部按 Agent3-V5.2.1 稳定逻辑逐 claim 调用；该版本沿用 V5.2 checkpoint，并升级冻结 JSON、有限格式重试和显式失败状态。
 5. 同一场景内不得为每条 claim 重新加载一次 7B 基座模型。
 6. 保存每条 raw output，再运行后处理、校验和聚合。
 7. 模型返回的 `evidence_ids` 必须属于该 claim 输入的证据集合。

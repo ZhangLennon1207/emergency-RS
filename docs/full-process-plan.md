@@ -281,7 +281,8 @@ FRONTEND_ORIGINS=http://localhost:5173,https://example.github.io
 {
   "agent_code": "agent2",
   "capability": "change_description",
-  "display_name": "灾前灾后遥感灾害变化描述生成智能体",
+  "display_name": "变化理解智能体",
+  "display_name_en": "Change Understanding Agent",
   "pipeline_version": "competition-four-agent-v1"
 }
 ```

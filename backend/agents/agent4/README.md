@@ -1,20 +1,23 @@
-# Agent4：可信灾情报告生成（V3）
+# Agent4：报告生成智能体（Report Generation Agent）
 
-当前正式版本为 `Agent4-V3`，能力名保持 `report_generation`；历史来源
-`Agent5-V2` 只记录在 manifest。模型仅消费 Agent3 生成的可信证据包。
+当前Agent4对应历史交接版本 `Agent5-V2`。负责人将可信证据包转报告、格式归一化和导出代码提交到本目录。
 
-正式证据字段为 `accepted_claims`、`revised_claims`、`rejected_claims` 和
-`pending_claims`。正式报告结构位于 `platform_report_json.sections.*`，不再以旧
-`key_findings` 作为模型契约。输出同时包含 `markdown_report_zh` 和
-`markdown_report_en`；仓库当前旧前端所需的 `markdown_report` 暂时作为中文兼容
-别名返回。
+## 输入
 
-`adapter.py` 实现统一 `run(payload, work_dir, config)`，并复用进程内
-`ReusableAgent4Adapter`，避免每个请求重新加载 7B 模型。模型路径通过
-`AGENT4_BASE_MODEL` 和 `AGENT4_ADAPTER` 配置，权重不提交。
+- Agent3生成的 `verified_evidence_package`
 
-无模型测试：
+## 主要输出
 
-```powershell
-python -m pytest backend/agents/agent4/tests
-```
+- `platform_report_json`
+- `markdown_report`
+- 固定五段式报告正文
+
+## 提交要求
+
+1. 原始代码放入 `src/`。
+2. 在 `adapter.py` 中接入统一 `run()`。
+3. 正式结论只能使用 accepted和qualified内容。
+4. 保留 `normalize_agent5_output.py` 或等价归一化步骤。
+5. 测试Markdown五个固定标题完整存在。
+
+正式字段以 `docs/api-contract.md` 的 `report_generation` 为准。

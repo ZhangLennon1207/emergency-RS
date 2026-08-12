@@ -28,6 +28,10 @@ function ReportsPage() {
 
   if (!task) return <div className="loading-panel">正在生成报告预览…</div>
   const report = normalizeGeneratedReport(task.report)
+  const previewLanguage = report?.markdownZh ? 'zh-CN' : 'en-US'
+  const previewConclusion = previewLanguage === 'zh-CN'
+    ? report?.finalConclusion
+    : report?.finalConclusionEn
 
   return (
     <div className="page-stack">
@@ -45,15 +49,17 @@ function ReportsPage() {
             <>
               <h1>{task.name}</h1>
               <h2>1. 报告摘要</h2>
-              <p>任务 {task.id} 面向{task.location}开展{task.disasterLabel}遥感灾情评估。</p>
+              <p>{previewConclusion || `任务 ${task.id} 面向${task.location}开展${task.disasterLabel}遥感灾情评估。`}</p>
               <h2>2. 核心灾情指标</h2>
-              <p>建筑区域共检测 15,820 个有效像素，其中 3—4 级严重损伤占 23%。</p>
+              <p>{report.keyFindings.length + report.revisedFindings.length
+                ? `本报告包含 ${report.keyFindings.length} 条直接采纳结论和 ${report.revisedFindings.length} 条安全修订结论。`
+                : '当前没有可进入正式报告的核心指标。'}</p>
               <h2>3. 分区评估结果</h2>
-              <p>{report.keyFindings[0] ?? '当前没有可进入正式报告的分区结论。'}</p>
+              <p>{report.findingText(report.keyFindings[0] ?? report.revisedFindings[0], previewLanguage) || '当前没有可进入正式报告的分区结论。'}</p>
               <h2>4. 证据支撑与一致性校验</h2>
-              <p>报告仅采用经 Agent3 校验后进入 accepted 或 qualified 集合的结论。</p>
+              <p>报告仅采用经 Agent3 校验后进入 accepted 或 revised 集合的结论。</p>
               <h2>5. 证据局限与不可下结论事项</h2>
-              <p>{report.limitations.join('；') || '当前未声明证据局限。'}</p>
+              <p>{report.limitations.map((item) => report.findingText(item, previewLanguage)).filter(Boolean).join('；') || '当前未声明证据局限。'}</p>
             </>
           ) : <div className="report-preview-empty">Agent4 尚未生成可预览的正式报告。</div>}
         </article>
@@ -61,7 +67,8 @@ function ReportsPage() {
         <aside className="report-side">
           <GeneratedReportPanel
             onDownloadJson={report ? () => downloadFile(`${task.id}.json`, JSON.stringify(task.report, null, 2), 'application/json') : null}
-            onDownloadMarkdown={report ? () => downloadFile(`${task.id}.md`, report.markdownReport, 'text/markdown') : null}
+            onDownloadMarkdownZh={report?.markdownZh ? () => downloadFile(`${task.id}_zh.md`, report.markdownZh, 'text/markdown;charset=utf-8') : null}
+            onDownloadMarkdownEn={report?.markdownEn ? () => downloadFile(`${task.id}_en.md`, report.markdownEn, 'text/markdown;charset=utf-8') : null}
             result={report}
           />
         </aside>
