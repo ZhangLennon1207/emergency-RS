@@ -160,3 +160,21 @@ class Agent34Client:
                 "REMOTE_UNAVAILABLE", "Agent4 service is unavailable"
             ) from error
         return self._response_json(response)
+
+    def download_artifact(self, *, download_url: str, destination: str | Path) -> Path:
+        """Download a protected Agent34 artifact into the controller store."""
+        if not download_url.startswith("/api/v1/artifacts/") or ".." in download_url:
+            raise Agent34ServiceError("REMOTE_ARTIFACT_INVALID", "Agent34 artifact URL is invalid")
+        target = Path(destination)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            with self._client.stream("GET", download_url) as response:
+                if response.is_error:
+                    self._response_json(response)
+                with target.open("wb") as stream:
+                    for chunk in response.iter_bytes():
+                        stream.write(chunk)
+        except httpx.HTTPError as error:
+            target.unlink(missing_ok=True)
+            raise Agent34ServiceError("REMOTE_UNAVAILABLE", "Agent34 artifact download failed") from error
+        return target

@@ -2,9 +2,10 @@
   "agent_code": "agent3",
   "capability": "evidence_verification",
   "display_name": "证据约束核验智能体",
+  "source_version": "Agent3-V5.2.1",
+  "historical_source_version": "Agent4-V4",
   "display_name_en": "Evidence-Grounded Verification Agent",
-  "source_version": "Agent4-V4",
   "entrypoint": "backend.agents.agent3.adapter:run",
-  "owner": "待填写",
-  "status": "waiting_for_submission"
+  "owner": "weimiao828",
+  "status": "submitted"
 }

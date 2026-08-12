@@ -1,0 +1,10 @@
+{
+  "claim_id": "C900005",
+  "claim": "The supplied evidence proves that flooding is the exact disaster cause.",
+  "language": "en",
+  "claim_type": "disaster_type_inference",
+  "gold_support_status": "unsupported",
+  "predicted_support_status": "unsupported",
+  "scene_uid": "SCENE_FIXTURE_05",
+  "deidentified": true
+}

@@ -469,6 +469,17 @@ def test_orchestrator_runs_remote_agent3_and_agent4_when_configured(
             assert kwargs["building_instance_mask"].is_file()
             return {
                 "contract_version": "agent34-http-1.0",
+                "artifacts": [
+                    {
+                        "artifact_type": "second_check_crop",
+                        "claim_id": "C001",
+                        "file_name": "pre_image_crop.png",
+                        "download_url": (
+                            "/api/v1/artifacts/test-job/sample-001/second_check/"
+                            "C001/pre_image_crop.png"
+                        ),
+                    }
+                ],
                 "verified_evidence_package": {
                     "schema_version": "agent3_verified_package_v1.1",
                     "task_info": {"scene_uid": "sample-001"},
@@ -513,6 +524,12 @@ def test_orchestrator_runs_remote_agent3_and_agent4_when_configured(
                 "markdown_report_en": "# English disaster report",
             }
 
+        def download_artifact(self, *, download_url, destination):
+            target = Path(destination)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(image_bytes())
+            return target
+
         def close(self):
             self.closed = True
 
@@ -540,6 +557,22 @@ def test_orchestrator_runs_remote_agent3_and_agent4_when_configured(
     assert job["result"]["agent4"]["status"] == "succeeded"
     assert "raw_first_output" not in json.dumps(job["result"])
     assert "agent3_verified_evidence_package" in job["result"]["artifacts"]
+    crop_key = "agent3_second_check_crop_1"
+    assert crop_key in job["result"]["artifacts"]
+    assert job["result"]["artifacts"][crop_key].startswith(
+        "/api/v1/jobs/test-job/artifacts/"
+    )
+    assert "/api/v1/artifacts/" not in json.dumps(job["result"])
+    crop_path = (
+        settings.runtime_root
+        / "jobs"
+        / "test-job"
+        / "agent3"
+        / "second_check"
+        / "C001"
+        / "pre_image_crop.png"
+    )
+    assert crop_path.read_bytes() == image_bytes()
     assert "agent4_platform_report" in job["result"]["artifacts"]
     assert "agent4_markdown_report_zh" in job["result"]["artifacts"]
     assert fake_client.closed is True

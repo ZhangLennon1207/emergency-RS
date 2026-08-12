@@ -1,0 +1,207 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Agent4 Platform Report V3",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "report_type",
+    "task_info",
+    "report_summary",
+    "sections",
+    "evidence_index",
+    "review_info",
+    "disclaimer"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "agent4_report_v3"
+    },
+    "report_type": {
+      "const": "preliminary_remote_sensing_assessment"
+    },
+    "task_info": {
+      "type": "object",
+      "required": [
+        "scene_uid"
+      ]
+    },
+    "report_summary": {
+      "type": "object",
+      "required": [
+        "accepted_count",
+        "revised_count",
+        "rejected_count",
+        "pending_count"
+      ]
+    },
+    "sections": {
+      "type": "object",
+      "required": [
+        "executive_summary",
+        "key_disaster_indicators",
+        "regional_assessment",
+        "evidence_support_and_consistency_check",
+        "limitations_and_nonconclusive_items"
+      ],
+      "properties": {
+        "executive_summary": {
+          "$ref": "#/$defs/bilingual_text"
+        },
+        "key_disaster_indicators": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/finding"
+          }
+        },
+        "regional_assessment": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/finding"
+          }
+        },
+        "evidence_support_and_consistency_check": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence_item"
+          }
+        },
+        "limitations_and_nonconclusive_items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/limitation"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "evidence_index": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence_item"
+      }
+    },
+    "review_info": {
+      "type": "object",
+      "required": [
+        "report_review_state",
+        "human_review_required",
+        "human_review_claim_count",
+        "attention_required",
+        "invalid_model_output_count"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "report_review_state": {"type": "string"},
+        "human_review_required": {"type": "boolean"},
+        "human_review_claim_count": {"type": "integer", "minimum": 0},
+        "attention_required": {"type": "boolean"},
+        "invalid_model_output_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "disclaimer": {
+      "$ref": "#/$defs/bilingual_text"
+    }
+  },
+  "$defs": {
+    "bilingual_text": {
+      "type": "object",
+      "required": [
+        "zh-CN",
+        "en-US"
+      ],
+      "properties": {
+        "zh-CN": {
+          "type": "string"
+        },
+        "en-US": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "finding": {
+      "type": "object",
+      "required": [
+        "claim_id",
+        "claim_type",
+        "support_status",
+        "evidence_ids",
+        "text"
+      ],
+      "properties": {
+        "claim_id": {
+          "type": "string"
+        },
+        "claim_type": {
+          "type": "string"
+        },
+        "support_status": {
+          "enum": [
+            "supported",
+            "partially_supported",
+            "exaggerated"
+          ]
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "visual_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "text": {
+          "$ref": "#/$defs/bilingual_text"
+        }
+      }
+    },
+    "evidence_item": {
+      "type": "object",
+      "required": [
+        "evidence_id"
+      ],
+      "properties": {
+        "evidence_id": {
+          "type": "string"
+        },
+        "claim_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "visual_ref": {
+          "type": "string"
+        }
+      }
+    },
+    "limitation": {
+      "type": "object",
+      "required": [
+        "type",
+        "text"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "rejected_claim",
+            "pending_review",
+            "data_quality",
+            "insufficient_evidence",
+            "scope_limitation"
+          ]
+        },
+        "claim_id": {
+          "type": "string"
+        },
+        "text": {
+          "$ref": "#/$defs/bilingual_text"
+        }
+      }
+    }
+  }
+}

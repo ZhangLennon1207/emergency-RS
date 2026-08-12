@@ -1,0 +1,68 @@
+{
+  "runtime_schema_version": "3.1-runtime",
+  "scene_uid": "SCENE_FIXTURE_01",
+  "claim_id": "C900001",
+  "first_check": {
+    "schema_version": "3.1",
+    "scene_uid": "SCENE_FIXTURE_01",
+    "claim_id": "C900001",
+    "claim_type": "building_damage_quantity",
+    "support_status": "supported",
+    "evidence_ids": [
+      "SCENE_BUILDING_SUMMARY"
+    ],
+    "reason": "The scene-level building summary records total_buildings=0.",
+    "suggested_revision": "The structured evidence records no detected buildings in this scene.",
+    "second_check": {
+      "required": false,
+      "trigger_reasons": [],
+      "recommended_inputs": [],
+      "recommended_next_step": ""
+    },
+    "human_review_state": "unreviewed"
+  },
+  "crop_check": null,
+  "final_check": {
+    "schema_version": "3.1",
+    "scene_uid": "SCENE_FIXTURE_01",
+    "claim_id": "C900001",
+    "claim_type": "building_damage_quantity",
+    "support_status": "supported",
+    "evidence_ids": [
+      "SCENE_BUILDING_SUMMARY"
+    ],
+    "reason": "The scene-level building summary records total_buildings=0.",
+    "suggested_revision": "The structured evidence records no detected buildings in this scene.",
+    "second_check": {
+      "required": false,
+      "trigger_reasons": [],
+      "recommended_inputs": [],
+      "recommended_next_step": ""
+    },
+    "human_review_state": "unreviewed"
+  },
+  "resolution_state": "finalized",
+  "human_review_required": false,
+  "audit": {
+    "trigger_reasons": [],
+    "recommended_inputs": [
+      "pre_image",
+      "post_image",
+      "fused_overlay",
+      "damage_map",
+      "road_status_map"
+    ],
+    "recommended_next_step": "finalize_first_check",
+    "crop_region": null,
+    "model_version": "Agent3-V5.2.1",
+    "created_at": "<RUNTIME_TIMESTAMP>",
+    "second_pass_auto_built": false
+  },
+  "generation_quality": {
+    "fixture_source": "actual_v52_validation_first_check_deidentified",
+    "first_check_strict_json": true,
+    "first_check_schema_exact": true,
+    "retry_used": false,
+    "parse_failure": false
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "schema_version": "agent4_image_manifest_v1",
+  "scene_uid": "SCENE_EXAMPLE",
+  "assets": [
+    {
+      "asset_id": "IMG_EXAMPLE_PRE_POST",
+      "asset_type": "pre_post_pair",
+      "path": "path/to/pre_post_pair.png",
+      "evidence_ids": [
+        "VIS_PRE_POST"
+      ],
+      "priority": 1,
+      "caption": {
+        "zh-CN": "灾前—灾后遥感影像对比",
+        "en-US": "Pre- and post-disaster remote-sensing comparison"
+      }
+    },
+    {
+      "asset_id": "IMG_EXAMPLE_DAMAGE",
+      "asset_type": "damage_overlay",
+      "path": "path/to/damage_map.png",
+      "evidence_ids": [
+        "B_EXAMPLE_001"
+      ],
+      "priority": 2,
+      "caption": {
+        "zh-CN": "建筑损伤证据可视化",
+        "en-US": "Building-damage evidence visualization"
+      }
+    }
+  ]
+}

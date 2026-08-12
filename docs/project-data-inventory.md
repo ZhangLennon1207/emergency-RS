@@ -308,7 +308,7 @@ E:\遥感大创\pair_ablation_ebdtest20_seed20260728(1)\pair_ablation_ebdtest20_
 
 - Agent1 推理源代码
 - Agent2 推理源代码
-- 当前 Agent3-V5.2 的完整后端包和实际任务输出
+- 当前 Agent3-V5.2.1 的完整后端包和实际任务输出
 - 当前 Agent4-V3 的完整后端包和实际任务输出
 - PyTorch 模型权重
 - FastAPI 后端实现
@@ -328,7 +328,7 @@ E:\遥感大创\frontend_codex_handoff_agent4_agent5_json
 
 已提供：
 
-- Agent3-V5.2 证据校验格式、五类 `support_status` 和评估摘要。
+- Agent3-V5.2.1 证据校验格式、五类 `support_status` 和评估摘要。
 - `check_result` 与 `verified_evidence_package` 字段规范。
 - Agent4-V3 的 `platform_report_json` 和中英文 Markdown 规范。
 - 报告安全边界、前端卡片和排除项展示规则。
@@ -336,7 +336,7 @@ E:\遥感大创\frontend_codex_handoff_agent4_agent5_json
 在当前四智能体流水线中映射为：
 
 ```text
-当前 Agent3 evidence_verification ← Agent3-V5.2
+当前 Agent3 evidence_verification ← Agent3-V5.2.1
 当前 Agent4 report_generation     ← Agent4-V3
 ```
 

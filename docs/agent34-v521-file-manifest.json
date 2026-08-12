@@ -1,0 +1,573 @@
+{
+  "manifest_version": "agent34-public-source-v5.2.1",
+  "agent3_version": "Agent3-V5.2.1",
+  "agent4_version": "Agent4-V3",
+  "weights_included": false,
+  "files": [
+    {
+      "path": "backend/agents/agent3/.pytest_cache/README.md",
+      "sha256": "73fd6fccdd802c419a6b2d983d6c3173b7da97558ac4b589edec2dfe443db9ad",
+      "size_bytes": 302
+    },
+    {
+      "path": "backend/agents/agent3/__init__.py",
+      "sha256": "1ff7f8b8f3ab1b547f220d09a051c1824b105db78ed8d548936b88555b5d00b4",
+      "size_bytes": 45
+    },
+    {
+      "path": "backend/agents/agent3/adapter.py",
+      "sha256": "c11b8b9f43b16cb3e8bc9a45e2d62a32681eb27fc4762a4546f73d0dd187e2ae",
+      "size_bytes": 2378
+    },
+    {
+      "path": "backend/agents/agent3/AGENT3_V5.2.1_CHANGELOG.md",
+      "sha256": "c6233c0e81249764da5bae8edbc2a644684f58e3fbf5a8c871a68f5c3aa57def",
+      "size_bytes": 1366
+    },
+    {
+      "path": "backend/agents/agent3/examples/example_request.json",
+      "sha256": "e9bd4ce9b9767dfbf0add023c6f367405b3bb67524f664aaafe161967a0a57d7",
+      "size_bytes": 2085
+    },
+    {
+      "path": "backend/agents/agent3/examples/example_request_known_good.json",
+      "sha256": "e9bd4ce9b9767dfbf0add023c6f367405b3bb67524f664aaafe161967a0a57d7",
+      "size_bytes": 2085
+    },
+    {
+      "path": "backend/agents/agent3/examples/example_runtime_known_good.json",
+      "sha256": "27636907e63e4e839bd8887fa3eda76a8e68a7355c77557fc63294e8431a5b1e",
+      "size_bytes": 2711
+    },
+    {
+      "path": "backend/agents/agent3/examples/example_runtime_output.json",
+      "sha256": "d344c619eed8da2f7814c78f413f4b35602a01911d0d724504e2b91c3de8308c",
+      "size_bytes": 2711
+    },
+    {
+      "path": "backend/agents/agent3/examples/llamafactory_reference_output.json",
+      "sha256": "df4ed95107cc7d097788d29dc5719b14c493bc2b33a2a2460452e43ecee2ce63",
+      "size_bytes": 505
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/01_building_building_damage_quantity/01_claim.json",
+      "sha256": "01fa25ae32e42de71181b5115da5df7e1bc7cd03805571b82e7ad4201b972344",
+      "size_bytes": 323
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/01_building_building_damage_quantity/02_validation_record_deidentified.json",
+      "sha256": "6bc3ff1d830f72f68454280f21c7f9c667dfc2da529e33b58fd9c6f9a42f6440",
+      "size_bytes": 2086
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/01_building_building_damage_quantity/03_runtime_request.json",
+      "sha256": "360f6867daec6759eabacdfb705e3ec9e5d31ff802bc0eda16bc786bf9241bf3",
+      "size_bytes": 2269
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/01_building_building_damage_quantity/04_raw_model_output_deidentified.txt",
+      "sha256": "75313a8c1a8096d39cd495fc2b1f8a08bff222eff396e0e742b336ae9a004bea",
+      "size_bytes": 518
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/01_building_building_damage_quantity/05_first_check_normalized.json",
+      "sha256": "44a969f52ed7ba86f13161c597511f0261be0f1516986762a137165c5497bbdc",
+      "size_bytes": 584
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/01_building_building_damage_quantity/06_runtime_output_without_second_pass.json",
+      "sha256": "956a3a4f955c18f628c5ff05037de5cbefad263bec941aaed57c5397c0819509",
+      "size_bytes": 2114
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/02_road_road_impact/01_claim.json",
+      "sha256": "f0998fe89dcdb1094a32a3aecbd295d4852829d3420161a6a6b5b4d079778c53",
+      "size_bytes": 328
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/02_road_road_impact/02_validation_record_deidentified.json",
+      "sha256": "e33ac94443cfb5e23103eeccb641d571e80853eaf7a0a3ffb3164c3da5b15b25",
+      "size_bytes": 2311
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/02_road_road_impact/03_runtime_request.json",
+      "sha256": "bde63ba0cc92c121b27e119beaca9f08068b0750140ae2986a8d0448cc69c7ee",
+      "size_bytes": 2472
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/02_road_road_impact/04_raw_model_output_deidentified.txt",
+      "sha256": "cf2aa37620a2b5fe6f137ae5b4d2ab707c4e0067f33d2e087f0648e595996361",
+      "size_bytes": 742
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/02_road_road_impact/05_first_check_normalized.json",
+      "sha256": "38109e08ea6c517cb7f2cf88765153ef743c8296595693c44c7d580991fa1205",
+      "size_bytes": 857
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/02_road_road_impact/06_runtime_output_without_second_pass.json",
+      "sha256": "85a3605e351f162c255c6e142e1aa9b209f980988912e9470e1e75224de54685",
+      "size_bytes": 1834
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/02_road_road_impact/07_second_pass_request_template.json",
+      "sha256": "a1a20796d97a7f4a9378809445c58b89a3538e441a507c3f21f2bda6fcf47a07",
+      "size_bytes": 3464
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/02_road_road_impact/08_second_pass_note.md",
+      "sha256": "b49a14fa224fd76d73fd8756d0eeaf6ff0884676ce3461e2003fec1ce0435c4e",
+      "size_bytes": 357
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/03_partially_supported_road_impact/01_claim.json",
+      "sha256": "784cc183cbab262f7e1acda61a0d166b5777979c6e5d7c1efeaca73c1bbcad30",
+      "size_bytes": 291
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/03_partially_supported_road_impact/02_validation_record_deidentified.json",
+      "sha256": "edbdaa04519b83add3681bd3f463da4ac665dfa0cae1aff919a7e67e47c10cd1",
+      "size_bytes": 2261
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/03_partially_supported_road_impact/03_runtime_request.json",
+      "sha256": "bfcbb23ad43bbfcd0ed658de19325434d3b1d8f9ab98f7664af5ffa6a70a5b51",
+      "size_bytes": 2422
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/03_partially_supported_road_impact/04_raw_model_output_deidentified.txt",
+      "sha256": "38b5b31976a1cfb28048c427adb29d21f3bf40dbf6f41ea5e146bf7a177ffdb1",
+      "size_bytes": 714
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/03_partially_supported_road_impact/05_first_check_normalized.json",
+      "sha256": "756945d74ce61045ab4e9f2dac75dae93b6fecea1bef50a2e54bd73bf3bf6e7c",
+      "size_bytes": 829
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/03_partially_supported_road_impact/06_runtime_output_without_second_pass.json",
+      "sha256": "7821ecde1073dc768680e2b59ffc0c70b1459223de290130c0a2263b4a144829",
+      "size_bytes": 1852
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/03_partially_supported_road_impact/07_second_pass_request_template.json",
+      "sha256": "7a4e7d63468c38fd351b5c57e50c0896f480d92ba8aabd15efc977b14b6b7cd1",
+      "size_bytes": 3386
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/03_partially_supported_road_impact/08_second_pass_note.md",
+      "sha256": "b49a14fa224fd76d73fd8756d0eeaf6ff0884676ce3461e2003fec1ce0435c4e",
+      "size_bytes": 357
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/04_contradicted_or_exaggerated_building_damage_quantity/01_claim.json",
+      "sha256": "39450d24ec7ab14d3984bce4436990cc4520f4b0dcbb2a96f2585f1d15c1610a",
+      "size_bytes": 302
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/04_contradicted_or_exaggerated_building_damage_quantity/02_validation_record_deidentified.json",
+      "sha256": "83b3e500a05745fc0fdc9abbb6bad29199c716fecfd794d4e6fcb8fb8d33e94d",
+      "size_bytes": 2060
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/04_contradicted_or_exaggerated_building_damage_quantity/03_runtime_request.json",
+      "sha256": "49499c0a97894974c89a84938c5432e30b257f6980d8c1616dbede85838fa834",
+      "size_bytes": 2243
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/04_contradicted_or_exaggerated_building_damage_quantity/04_raw_model_output_deidentified.txt",
+      "sha256": "bbd8bc75c5c85ee9aa47a955f583400a65f1a648ea742412cfa8754a2740840f",
+      "size_bytes": 490
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/04_contradicted_or_exaggerated_building_damage_quantity/05_first_check_normalized.json",
+      "sha256": "7c4d317db60d086d0866f5f865f8599fc65642f1a2977d94c5af511d3f2c31f5",
+      "size_bytes": 556
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/04_contradicted_or_exaggerated_building_damage_quantity/06_runtime_output_without_second_pass.json",
+      "sha256": "cac4afc52ad8ff229ec95d3d35eb1c8b06e17897ea4c92124929c3ec8a941737",
+      "size_bytes": 2058
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/05_unsupported_or_other_disaster_type_inference/01_claim.json",
+      "sha256": "b15ea7c803437abdb5e5e6f32b75fbdecbf4d8fd15d93bcfa8064ffa0f54c13f",
+      "size_bytes": 329
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/05_unsupported_or_other_disaster_type_inference/02_validation_record_deidentified.json",
+      "sha256": "8ac85099e78c4c6eacb87e741d7fbc34ce6a1ac203cacd2b8f12c9103d30b108",
+      "size_bytes": 2088
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/05_unsupported_or_other_disaster_type_inference/03_runtime_request.json",
+      "sha256": "4c60c113a7a6d45430875e4a7a5c8f0bf73a1ebb85cc3c8f47efac01f9b9580d",
+      "size_bytes": 2271
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/05_unsupported_or_other_disaster_type_inference/04_raw_model_output_deidentified.txt",
+      "sha256": "89f59fa7b5ec9be19bb83da7ca3c4299a4ac146ada9744f3a8fe552d855ddd6a",
+      "size_bytes": 535
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/05_unsupported_or_other_disaster_type_inference/05_first_check_normalized.json",
+      "sha256": "5f2950b403c44b89076f58466293c4ebd6040485650e986416f22c33aee33eb1",
+      "size_bytes": 601
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/05_unsupported_or_other_disaster_type_inference/06_runtime_output_without_second_pass.json",
+      "sha256": "5f3bfa4e93ceab7cdbb8b08d2022f7c3c54e579f1c1cc2192c349aef38543ba7",
+      "size_bytes": 2148
+    },
+    {
+      "path": "backend/agents/agent3/examples/v52_fixtures/fixture_manifest.json",
+      "sha256": "2add803a5c9ac873c2899ac49eecc644b358e9c56bf7979eaed27df23f4578c1",
+      "size_bytes": 2319
+    },
+    {
+      "path": "backend/agents/agent3/manifest.json",
+      "sha256": "3c3d6e7f3a5a9a2cbc3ef0484649f0940de7f0600ae8655e81473588ceadecb4",
+      "size_bytes": 313
+    },
+    {
+      "path": "backend/agents/agent3/model_metadata.json",
+      "sha256": "e711b50bc2d42f1e47e4cf9e19b22e7d9a078be6a46956c27844cc93920f7f61",
+      "size_bytes": 567
+    },
+    {
+      "path": "backend/agents/agent3/prompts/evidence_verification.txt",
+      "sha256": "bfd36365ae6ec70e2ee1d5861a88b6ba9d931a1093e5d84d8fb52a85d0a7c81e",
+      "size_bytes": 447
+    },
+    {
+      "path": "backend/agents/agent3/README.md",
+      "sha256": "99eb074253ee920ccd4888975b761e78859529ad5a40cabfb5b10be8f51d0023",
+      "size_bytes": 1284
+    },
+    {
+      "path": "backend/agents/agent3/requirements.txt",
+      "sha256": "7ecc1ceb58b5fc82f3b8ae079df3fe20560389be3a693a13b413a532adf9999a",
+      "size_bytes": 157
+    },
+    {
+      "path": "backend/agents/agent3/schemas/claim_type_enum_v52.json",
+      "sha256": "68d828770deaaaa6cfb1bb78ad9005bfea4267997b8e8949db00fb78a6e97057",
+      "size_bytes": 2726
+    },
+    {
+      "path": "backend/agents/agent3/src/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "backend/agents/agent3/src/build_verified_package.py",
+      "sha256": "cc44d339f3fe87cebae9623f6ec3c6dff317de34b47c4e36a2a4e96433557c54",
+      "size_bytes": 3464
+    },
+    {
+      "path": "backend/agents/agent3/src/claim_verifier.py",
+      "sha256": "46ebf7264db0b895eb623df4bebdeabb145ef6cdaeaf51b185abc0259329ba6c",
+      "size_bytes": 13352
+    },
+    {
+      "path": "backend/agents/agent3/src/config.py",
+      "sha256": "92e0957fa9f144036200fa44dc6208826bfce5d9042d885873404ae4738c4032",
+      "size_bytes": 1792
+    },
+    {
+      "path": "backend/agents/agent3/src/model_runner.py",
+      "sha256": "c33829c5906c0fb8ef716a73d3d19da4353aadeb038bbc38f4395da0eb59c0aa",
+      "size_bytes": 8172
+    },
+    {
+      "path": "backend/agents/agent3/src/postprocess_minimal_check.py",
+      "sha256": "7c47b3f79230acac7798274a8530fc97c1e0cbc82a55d4dc921c215e83bdc4e4",
+      "size_bytes": 5905
+    },
+    {
+      "path": "backend/agents/agent3/src/prompt_v3_1.txt",
+      "sha256": "bfd36365ae6ec70e2ee1d5861a88b6ba9d931a1093e5d84d8fb52a85d0a7c81e",
+      "size_bytes": 447
+    },
+    {
+      "path": "backend/agents/agent3/src/prompts.py",
+      "sha256": "15b14bbced7974074ec264f31deac991e251134ebf8f435e3680cc63d58c3974",
+      "size_bytes": 197
+    },
+    {
+      "path": "backend/agents/agent3/src/protocol_snapshot.json",
+      "sha256": "07b9e126252b4ef0c16ca0e52146a52660589f2d7d0ed396b5e3b0d098ff871a",
+      "size_bytes": 854
+    },
+    {
+      "path": "backend/agents/agent3/src/request_builder.py",
+      "sha256": "0515ffa29764778132685ec40a8a4970952051cc1b653c9bb5da0c53733d375d",
+      "size_bytes": 664
+    },
+    {
+      "path": "backend/agents/agent3/src/schemas.py",
+      "sha256": "7c30b7aa2983799b51ff83bbc1c6615adac449f26304b7332f645aaed69a101b",
+      "size_bytes": 2770
+    },
+    {
+      "path": "backend/agents/agent3/src/second_check_crop_builder.py",
+      "sha256": "f89542555ce901b7bfe549c1f3fd603b1e796e4761296635be0efe240b8b0e4e",
+      "size_bytes": 3708
+    },
+    {
+      "path": "backend/agents/agent3/src/second_check_policy.py",
+      "sha256": "fc0d19fb6c7eb2a4613b928f398d97076b84c533296882dcc42dff6a9e2a848b",
+      "size_bytes": 2923
+    },
+    {
+      "path": "backend/agents/agent3/src/second_pass_request_builder.py",
+      "sha256": "59bd542d82ba7e74b7ed1303f53bc52f9d0b2f53fb48d5bdaf4885e846c8b020",
+      "size_bytes": 5630
+    },
+    {
+      "path": "backend/agents/agent3/src/verified_package_bridge.py",
+      "sha256": "5f7663149ee0195b3280b6a09f0823087b3bba80a0a1ceb59ab09e0980947d94",
+      "size_bytes": 3761
+    },
+    {
+      "path": "backend/agents/agent3/src/wrap_check_result.py",
+      "sha256": "dcbf403bd6f1bd3ac89a383592372fdcf9f157105ce3f9828c4b33a85c1fbe6b",
+      "size_bytes": 2558
+    },
+    {
+      "path": "backend/agents/agent3/tests/__init__.py",
+      "sha256": "5eb4698c8bbe3924df5c55db64c872b766676f7349cb0c83583f75bbd63e5454",
+      "size_bytes": 21
+    },
+    {
+      "path": "backend/agents/agent3/tests/test_adapter_contract.py",
+      "sha256": "e9f56cfc22fbef20a8189deb6c595c37274271b09bd79d884abb8ebcb423bee8",
+      "size_bytes": 1184
+    },
+    {
+      "path": "backend/agents/agent3/tests/test_postprocess.py",
+      "sha256": "d2fe86d1613e60fc52247846f087583781ca17c1762f2dd387abf2a7ceae8e75",
+      "size_bytes": 3333
+    },
+    {
+      "path": "backend/agents/agent3/tests/test_runtime_resilience.py",
+      "sha256": "375f3cb338eea82705e18ccf74cc0103d21756df96581b2b39da87b3dbc89fc7",
+      "size_bytes": 4973
+    },
+    {
+      "path": "backend/agents/agent3/tests/test_second_check.py",
+      "sha256": "b20ed472509b06b798de0d9836af15302f3b84dc8f80bf7f01a466d038f9a1bf",
+      "size_bytes": 1564
+    },
+    {
+      "path": "backend/agents/agent3/tests/test_verified_package.py",
+      "sha256": "1a102b11f62cd08cf90618339d34fae53214b3709c0e94d32a2c5f7e50a70515",
+      "size_bytes": 1678
+    },
+    {
+      "path": "backend/agents/agent4/__init__.py",
+      "sha256": "9a94215577164419fecae0b0fcd33e0581b48ca2f702f963dd352cf020256e14",
+      "size_bytes": 41
+    },
+    {
+      "path": "backend/agents/agent4/adapter.py",
+      "sha256": "343f997c257d07949b2c3999ce4f7ac4c911d0ead69806506a3668fb5e4731fe",
+      "size_bytes": 2639
+    },
+    {
+      "path": "backend/agents/agent4/examples/example_asset_manifest.json",
+      "sha256": "e8df62e88db35f0f8b0aa02cbab73bbed33e2674711827f7bd066779c6bda5ed",
+      "size_bytes": 836
+    },
+    {
+      "path": "backend/agents/agent4/examples/example_request.json",
+      "sha256": "b91d775b4ab3a92d61d41d8e16618be377fefb26bbcce7bd8bb8668c84978939",
+      "size_bytes": 541
+    },
+    {
+      "path": "backend/agents/agent4/examples/README.md",
+      "sha256": "8bb16dbc2dede8fda1c389be23a8d022a8b1795cbb57b9e52c0cfebb2a078f41",
+      "size_bytes": 444
+    },
+    {
+      "path": "backend/agents/agent4/manifest.json",
+      "sha256": "0d6c083e924ca24c0b031f41fc5c3092236fe8450dcd4b45a732e92966e307b2",
+      "size_bytes": 311
+    },
+    {
+      "path": "backend/agents/agent4/model_metadata.json",
+      "sha256": "51622299a809ef9b25e5381d940b49a0a716709718985f4beb9e501cfeaa2894",
+      "size_bytes": 379
+    },
+    {
+      "path": "backend/agents/agent4/prompts/report_generation.txt",
+      "sha256": "b48fd0edea1e899dfc294352b9d1b16e7fc5fc41e63c2c80654e53ee47cd11fb",
+      "size_bytes": 1126
+    },
+    {
+      "path": "backend/agents/agent4/README.md",
+      "sha256": "aff15775493feac736e6d09d6b2878327483c11ee1057328ad30f105ef8f5261",
+      "size_bytes": 931
+    },
+    {
+      "path": "backend/agents/agent4/requirements.txt",
+      "sha256": "acd94595dbcf219547397d39f3c3784dcf07c39d965cd26d62535d7998d29a96",
+      "size_bytes": 154
+    },
+    {
+      "path": "backend/agents/agent4/schemas/platform_report_schema_v3.json",
+      "sha256": "a3908a37735c401cf5cdd85e297f5ec63b9b121293a09b886b60ddb23c4f5daf",
+      "size_bytes": 4778
+    },
+    {
+      "path": "backend/agents/agent4/src/__init__.py",
+      "sha256": "060a89e346f7da1f71515645917a1efed27382493cbd5ba0cf1fff4e046dd019",
+      "size_bytes": 159
+    },
+    {
+      "path": "backend/agents/agent4/src/assemble_report.py",
+      "sha256": "ce9d57d0fb4ba58c3f080bc609a590c3890e2a924cd48e8851a9d22e03aef588",
+      "size_bytes": 5000
+    },
+    {
+      "path": "backend/agents/agent4/src/image_binding.py",
+      "sha256": "3304e403a8c8739becf480e562d329715c4f26dabaec6ea3c2d6413033c51026",
+      "size_bytes": 3361
+    },
+    {
+      "path": "backend/agents/agent4/src/normalize_agent5_output.py",
+      "sha256": "effc46f8ffd23d3870e687e47e0852d85dc56d7132b8613244268f71d3f2cde9",
+      "size_bytes": 5918
+    },
+    {
+      "path": "backend/agents/agent4/src/platform_report_schema_v3.json",
+      "sha256": "a3908a37735c401cf5cdd85e297f5ec63b9b121293a09b886b60ddb23c4f5daf",
+      "size_bytes": 4778
+    },
+    {
+      "path": "backend/agents/agent4/src/renderers_separate.py",
+      "sha256": "5a8f9e832e73d07a12dd5e8575898eabb20ee07c35e6ac6d15ed75f6b7fc17df",
+      "size_bytes": 25123
+    },
+    {
+      "path": "backend/agents/agent4/src/report_runtime.py",
+      "sha256": "5ebe22585a9c703bd7b31235cefa55d214f4abf81ed88c7d47c2bfd295870804",
+      "size_bytes": 13907
+    },
+    {
+      "path": "backend/agents/agent4/src/reusable_adapter.py",
+      "sha256": "d66025d219e65980e9a28ac3d25211ec2366cd7932380a8a301b905a30a0fd54",
+      "size_bytes": 3735
+    },
+    {
+      "path": "backend/agents/agent4/src/slot_runner.py",
+      "sha256": "1578eacf5955e6ba587ae582b8696725d8b5178073aef364c7702460ba1942eb",
+      "size_bytes": 8110
+    },
+    {
+      "path": "backend/agents/agent4/src/system_prompt.txt",
+      "sha256": "b48fd0edea1e899dfc294352b9d1b16e7fc5fc41e63c2c80654e53ee47cd11fb",
+      "size_bytes": 1126
+    },
+    {
+      "path": "backend/agents/agent4/src/validate_report.py",
+      "sha256": "b08b155a56c9e7444ac350a19502a22eab25cc14b584a4c079c4dc09a3828715",
+      "size_bytes": 798
+    },
+    {
+      "path": "backend/agents/agent4/tests/__init__.py",
+      "sha256": "8560b7e73bd9b07f0c209b3e7ec54c501d8e01624ea448fbaa355db9c4f75fc3",
+      "size_bytes": 21
+    },
+    {
+      "path": "backend/agents/agent4/tests/test_adapter_contract.py",
+      "sha256": "b8bec85c5661cafe11d3137be7fb771ea52333708daaddb4fb2fb5a22a8bf003",
+      "size_bytes": 1893
+    },
+    {
+      "path": "backend/agents/agent4/tests/test_imports.py",
+      "sha256": "c412c2a195a0b5331bd55edb6e2c9fad2bba0a7c2f380bbc3ae6b1bf4efe707b",
+      "size_bytes": 722
+    },
+    {
+      "path": "backend/agents/agent4/tests/test_package.py",
+      "sha256": "e8631e2f2edc0b81acf8a6ad24e9d4b7c0f117391427c24d06e56d011502665d",
+      "size_bytes": 511
+    },
+    {
+      "path": "backend/agents/agent4/tests/test_review_routing.py",
+      "sha256": "c6ebdd1a7a50c980733655cc3df6bb6ce5f7e00d21b6b2cac737e4dba25b09e6",
+      "size_bytes": 725
+    },
+    {
+      "path": "backend/agents/agent4/tests/test_schema.py",
+      "sha256": "2f4fd4ebde77ef52fd233dcce6d9bf66fe49edc16718f14db09c8c589fc2236a",
+      "size_bytes": 370
+    },
+    {
+      "path": "backend/services/agent34_service/.env.example",
+      "sha256": "62733f7c7a0f23c486da595d9dd2fe09296d2b362a017f7c28f433876aae217c",
+      "size_bytes": 376
+    },
+    {
+      "path": "backend/services/agent34_service/__init__.py",
+      "sha256": "1fd5c62107c7aa20d1191f59deabdda35011788b34c7a58ef33dcb88d6487408",
+      "size_bytes": 32
+    },
+    {
+      "path": "backend/services/agent34_service/auth.py",
+      "sha256": "3a8281b2569e6c00bfc7e6c1e6491229de1d819c00cfcd36a9395513208bdc69",
+      "size_bytes": 640
+    },
+    {
+      "path": "backend/services/agent34_service/config.py",
+      "sha256": "bad561709d72c84ca6451b41bfa76dce5ded99460c97b52362ae15aa693dd696",
+      "size_bytes": 128
+    },
+    {
+      "path": "backend/services/agent34_service/main.py",
+      "sha256": "329a2716a0553c0e6905c9807538f616654981efc4ee0abfdbe9bad2f4e9a62d",
+      "size_bytes": 8432
+    },
+    {
+      "path": "backend/services/agent34_service/README.md",
+      "sha256": "85a272b3663976aed278e811be1f5421c9540cdda0c03eb94109ed66c9f2c51c",
+      "size_bytes": 1788
+    },
+    {
+      "path": "backend/services/agent34_service/request_builder.py",
+      "sha256": "037e6b073d7879d2c5f5b200d3757691c8442b87f5ceb42db4368ea0be20a29f",
+      "size_bytes": 3102
+    },
+    {
+      "path": "backend/services/agent34_service/requirements.txt",
+      "sha256": "c7ab4a106fcd3802cb902b0519d884d4d1c08141e5b3cbd31ec3526033ff3e5f",
+      "size_bytes": 235
+    },
+    {
+      "path": "backend/services/agent34_service/runtime_manager.py",
+      "sha256": "fc4e336760446e6971384a94de85bdcfc52d5e91080ddc8fc36641b6feeb900d",
+      "size_bytes": 4390
+    },
+    {
+      "path": "backend/services/agent34_service/schemas.py",
+      "sha256": "6800f4d6c97ae787621ff80bdbd5dc873df4703c5bbc993639513b57acd03d16",
+      "size_bytes": 2801
+    },
+    {
+      "path": "backend/services/agent34_service/settings.py",
+      "sha256": "0e07d1eb01e4bfad2cfa723251cf99c771574a9be0d7a15404bea19c1f53fdfe",
+      "size_bytes": 1091
+    },
+    {
+      "path": "backend/services/agent34_service/tests/__init__.py",
+      "sha256": "9388d55e38cf2596911e86e643f66fe9f0a5aca3330cd473e0d717d33a93209a",
+      "size_bytes": 30
+    },
+    {
+      "path": "backend/services/agent34_service/tests/test_http.py",
+      "sha256": "0dd15ac45d9d77f42c8efa45006dc097de0412b93af4c12ebbcc7b09e3f107a3",
+      "size_bytes": 5131
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "claim_id": "C900001",
+  "claim": "The structured evidence records no detected buildings in this scene.",
+  "language": "en",
+  "claim_type": "building_damage_quantity",
+  "gold_support_status": "supported",
+  "predicted_support_status": "supported",
+  "scene_uid": "SCENE_FIXTURE_01",
+  "deidentified": true
+}

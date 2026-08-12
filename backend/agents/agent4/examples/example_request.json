@@ -1,0 +1,21 @@
+{
+  "report_uid": "SCENE_EXAMPLE__full",
+  "task_info": {
+    "scene_uid": "SCENE_EXAMPLE"
+  },
+  "accepted_claims": [
+    {
+      "claim_id": "C_EXAMPLE_001",
+      "claim_type": "building_damage_level",
+      "support_status": "supported",
+      "report_text": "The target building shows verified visible damage.",
+      "evidence_ids": [
+        "B_EXAMPLE_001"
+      ],
+      "reason": "Supported by verified structured evidence."
+    }
+  ],
+  "revised_claims": [],
+  "rejected_claims": [],
+  "pending_claims": []
+}

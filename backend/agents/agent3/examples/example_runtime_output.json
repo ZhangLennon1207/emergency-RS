@@ -1,0 +1,70 @@
+{
+  "runtime_schema_version": "3.1-runtime",
+  "scene_uid": "S0004",
+  "claim_id": "C000183",
+  "first_check": {
+    "schema_version": "1.2",
+    "scene_uid": "S0004",
+    "claim_id": "C000183",
+    "claim_type": "building_damage_quantity",
+    "support_status": "supported",
+    "evidence_ids": [
+      "SCENE_BUILDING_SUMMARY"
+    ],
+    "reason": "The SCENE_BUILDING_SUMMARY contains total_buildings=0, indicating no detected buildings.",
+    "suggested_revision": "The structured evidence records no detected buildings in this scene.",
+    "second_check": {
+      "required": false,
+      "trigger_reasons": [],
+      "recommended_inputs": [],
+      "recommended_next_step": ""
+    },
+    "human_review_state": "unreviewed"
+  },
+  "crop_check": null,
+  "final_check": {
+    "schema_version": "1.2",
+    "scene_uid": "S0004",
+    "claim_id": "C000183",
+    "claim_type": "building_damage_quantity",
+    "support_status": "supported",
+    "evidence_ids": [
+      "SCENE_BUILDING_SUMMARY"
+    ],
+    "reason": "The SCENE_BUILDING_SUMMARY contains total_buildings=0, indicating no detected buildings.",
+    "suggested_revision": "The structured evidence records no detected buildings in this scene.",
+    "second_check": {
+      "required": false,
+      "trigger_reasons": [],
+      "recommended_inputs": [],
+      "recommended_next_step": ""
+    },
+    "human_review_state": "unreviewed"
+  },
+  "resolution_state": "finalized",
+  "human_review_required": false,
+  "audit": {
+    "trigger_reasons": [],
+    "recommended_inputs": [
+      "pre_image",
+      "post_image",
+      "fused_overlay",
+      "damage_map",
+      "road_status_map"
+    ],
+    "recommended_next_step": "finalize_first_check",
+    "crop_region": null,
+    "model_version": "V5.2",
+    "created_at": "2026-08-08T08:32:34.391008+00:00",
+    "format_retry": {
+      "used": true,
+      "raw_first_output": "{\"schema_version\": \"3.1\", \"scene_uid\": \"S0004\", \"claim_id\": \"C000183\", \"claim_type\": \"building_damage_quantity\", \"support_status\": \"supported\", \"reason\": \"The structured evidence records total_buildings=0 for this scene.\", \"affected_data\": \"the structured evidence records no detected buildings in this scene.\", \"suggested_revision\": \"The structured evidence records no detected buildings in this scene.\", \"second_check_request\": \"Request pair-wise comparison with a known-building scene when possible.\", \"human_review_state\": \"unreviewed\", \"request_counter\": 0, \"request_count_history=[]\", \"schema_version_reason\": null}"
+    }
+  },
+  "generation_quality": {
+    "first_check_strict_json": true,
+    "first_check_schema_exact": true,
+    "retry_used": true,
+    "parse_failure": false
+  }
+}

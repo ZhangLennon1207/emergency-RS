@@ -431,18 +431,40 @@ class JobOrchestrator:
         package = sanitized["verified_evidence_package"]
         artifact_path = job_root / "agent3" / "verified_evidence_package.json"
         self._write_json_artifact(artifact_path, package)
+        local_artifacts = [
+            {
+                "artifact_type": "verified_evidence_package",
+                "path": artifact_path.relative_to(job_root).as_posix(),
+            }
+        ]
+        # Remote crop URLs are private service URLs. Copy every permitted crop
+        # into the controller-owned Artifact Store so the public job response
+        # never exposes the model host, token, or private runtime directory.
+        for index, remote_artifact in enumerate(response.get("artifacts", []), start=1):
+            if not isinstance(remote_artifact, dict):
+                continue
+            download_url = remote_artifact.get("download_url")
+            claim_id = str(remote_artifact.get("claim_id") or "")
+            file_name = str(remote_artifact.get("file_name") or "")
+            if not isinstance(download_url, str) or not claim_id or not file_name:
+                continue
+            destination = job_root / "agent3" / "second_check" / claim_id / file_name
+            client.download_artifact(download_url=download_url, destination=destination)
+            local_artifacts.append(
+                {
+                    "artifact_type": f"second_check_crop_{index}",
+                    "claim_id": claim_id,
+                    "file_name": file_name,
+                    "path": destination.relative_to(job_root).as_posix(),
+                }
+            )
         result = {
             **sanitized,
             "agent_code": "agent3",
             "capability": "evidence_verification",
             "source_version": _source_version(response, "agent3", source_version),
             "status": "succeeded",
-            "artifacts": [
-                {
-                    "artifact_type": "verified_evidence_package",
-                    "path": artifact_path.relative_to(job_root).as_posix(),
-                }
-            ],
+            "artifacts": local_artifacts,
         }
         json.dumps(result, ensure_ascii=False)
         return result, normalized_claims

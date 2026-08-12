@@ -25,6 +25,7 @@ __pycache__/
 .env
 .env.*
 !.env.example
+!.env.agent34.example
 venv/
 .venv/
 .venv-model/
