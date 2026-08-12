@@ -16,6 +16,8 @@ const stageLabels = {
   starting: '正在准备模型任务',
   running_agent1: '正在分析建筑和道路视觉证据',
   running_agent2: '正在生成灾前—灾后变化描述',
+  running_agent3: '正在逐条核验证据',
+  running_agent4: '正在生成可信双语报告',
   assembling: '正在整理统一结果',
   succeeded: 'Agent1 和 Agent2 均已完成',
   partial_success: '部分智能体完成',
@@ -116,6 +118,7 @@ function LiveJobPage() {
   const artifacts = job?.result?.artifacts ?? {}
   const summary = job?.result?.agent1?.summary
   const reviewFlags = job?.result?.agent1?.review_flags
+  const reviewSummary = job?.result?.review_summary ?? {}
   const description = job?.result?.agent2?.description
   const claimList = job?.result?.agent2?.claim_list ?? []
   const verificationPayload = job?.result?.verification ?? job?.result?.agent3?.result ?? null
@@ -150,7 +153,7 @@ function LiveJobPage() {
     <div className="page-stack">
       <PageHeader
         actions={<Link className="button button-secondary" to="/tasks"><ArrowLeft size={17} />返回任务中心</Link>}
-        description={`${job.job_id} · 当前 Agent1 + Agent2 局域网联调`}
+        description={`${job.job_id} · ${fourAgentPipelineComplete ? '四智能体统一编排结果' : '当前可用智能体联调结果'}`}
         eyebrow="Live backend job"
         title="真实模型分析任务"
       />
@@ -166,8 +169,8 @@ function LiveJobPage() {
         <section className="panel pipeline-scope-note">
           <AlertTriangle size={21} />
           <div>
-            <strong>当前为 Agent1 + Agent2 联调结果</strong>
-            <span>Agent3 证据校验与 Agent4 报告生成尚未接入；即使任务显示执行成功，也不代表四智能体完整研判完成。</span>
+            <strong>当前任务未完成四智能体统一编排</strong>
+            <span>请根据下方智能体状态确认未执行或失败阶段；任务成功只代表当前已配置范围完成。</span>
           </div>
         </section>
       ) : null}
@@ -253,6 +256,26 @@ function LiveJobPage() {
             </section>
           ) : null}
 
+          {reviewSummary.human_review_claim_count > 0 ? (
+            <section className="panel manual-review-panel">
+              <div className="panel-heading">
+                <div><span className="eyebrow">Agent3 manual review</span><h2>证据语义待人工复核</h2></div>
+                <StatusBadge value="pending_review" />
+              </div>
+              <p>Agent3 有 {reviewSummary.human_review_claim_count} 条 Claim 在自动复核后仍存在证据不确定或冲突，需要人工判断。</p>
+            </section>
+          ) : null}
+
+          {reviewSummary.model_output_invalid_count > 0 ? (
+            <section className="panel model-output-warning">
+              <AlertTriangle size={21} />
+              <div>
+                <strong>模型输出格式异常</strong>
+                <span>{reviewSummary.model_output_invalid_count} 条 Claim 未满足 Agent3 JSON 契约，已从正式结论中隔离；这不等同于人工复核。</span>
+              </div>
+            </section>
+          ) : null}
+
           <section className="result-grid">
             <article className="panel">
               <div className="panel-heading">
@@ -279,7 +302,9 @@ function LiveJobPage() {
               {description ? <p className="description-copy">{description}</p> : <p className="muted-copy">Agent2 未返回变化描述。</p>}
               <div className="unverified-note">
                 <AlertTriangle size={17} />
-                <span>模型生成的变化描述，尚未经过 Agent3 证据校验。</span>
+                <span>{job.result.agent2?.verified
+                  ? '下方原始变化描述已由 Agent3 逐 Claim 核验，正式结论以核验结果为准。'
+                  : '模型生成的变化描述，尚未经过 Agent3 证据校验。'}</span>
               </div>
               {claimList.length ? (
                 <div className="unverified-claims">
@@ -287,7 +312,7 @@ function LiveJobPage() {
                   <ol>
                     {claimList.map((claim, index) => (
                       <li key={claim.claim_id ?? index}>
-                        <div><code>{claim.claim_id ?? `C${String(index + 1).padStart(3, '0')}`}</code><StatusBadge value="not_integrated" /></div>
+                        <div><code>{claim.claim_id ?? `C${String(index + 1).padStart(3, '0')}`}</code><StatusBadge value={job.result.agent2?.verified ? 'pass' : 'not_integrated'} /></div>
                         <p>{claim.claim ?? claim.text}</p>
                         {claim.related_evidence_ids?.length ? <small>关联证据：{claim.related_evidence_ids.join('、')}</small> : <small>尚未关联已核验证据</small>}
                       </li>

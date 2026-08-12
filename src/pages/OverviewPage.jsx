@@ -26,8 +26,8 @@ function normalizeRealDashboard(payload) {
     kpis: [
       { label: '累计真实任务', value: payload.counts.total, note: 'SQLite 持久化记录', tone: 'blue' },
       { label: '排队或运行中', value: payload.counts.active, note: '本地 GPU 串行队列', tone: 'cyan' },
-      { label: '待人工复核', value: payload.counts.review_required, note: '来自 Agent1 review_flags', tone: 'amber' },
-      { label: '当前范围成功', value: payload.counts.succeeded, note: '仅表示 Agent1 + Agent2', tone: 'green' },
+      { label: '待人工复核', value: payload.counts.review_required, note: '不含模型格式异常', tone: 'amber' },
+      { label: '执行成功', value: payload.counts.succeeded, note: '以各任务配置范围为准', tone: 'green' },
     ],
     trend: payload.trend,
     recentTasks: payload.recent_jobs.map(normalizeBackendJobSummary),
@@ -95,7 +95,7 @@ function OverviewPage() {
           <h2>让每一条灾情结论都能回到遥感证据</h2>
           <p>
             {isRealApiEnabled
-              ? '当前首页统计来自 FastAPI 与 SQLite；Agent3/4 未进入编排前，成功数量仅代表 Agent1+Agent2。'
+              ? '当前首页统计来自 FastAPI 与 SQLite；任务是否完成四智能体流程以结果中的流水线范围为准。'
               : '前端已按照四智能体业务链路组织任务、结果、证据和报告。Agent 后端接入后，只需替换服务层数据源。'}
           </p>
         </div>

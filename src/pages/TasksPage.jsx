@@ -11,7 +11,7 @@ import {
 import { listTasks } from '../services/taskService.js'
 
 const activeBackendStatuses = new Set([
-  'queued', 'starting', 'running_agent1', 'running_agent2', 'assembling',
+  'queued', 'starting', 'running_agent1', 'running_agent2', 'running_agent3', 'running_agent4', 'assembling',
 ])
 
 function formatTime(value) {

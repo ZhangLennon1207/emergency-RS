@@ -61,6 +61,8 @@ export function normalizeBackendJobSummary(job) {
     status: job.status,
     riskLevel: job.scene_risk_level ?? 'unknown',
     reviewRequired: job.review_required,
+    attentionRequired: job.attention_required,
+    modelOutputInvalidCount: job.model_output_invalid_count ?? 0,
     disasterType: 'unknown',
     disasterLabel: job.scope === 'agent1_agent2_local_only' ? 'Agent1 + Agent2' : '四智能体',
     createdAt: job.created_at,

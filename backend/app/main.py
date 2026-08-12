@@ -88,6 +88,10 @@ def _public_job(job: dict[str, Any], settings: Settings) -> dict[str, Any]:
 def _public_job_summary(job: dict[str, Any], settings: Settings) -> dict[str, Any]:
     result = job.get("result") or {}
     summary = (result.get("agent1") or {}).get("summary") or {}
+    review_summary = result.get("review_summary") or {}
+    review_required = bool(
+        result.get("review_required", summary.get("review_required", False))
+    )
     return {
         "job_id": job["job_id"],
         "sample_id": job["sample_id"],
@@ -104,7 +108,13 @@ def _public_job_summary(job: dict[str, Any], settings: Settings) -> dict[str, An
             result.get("four_agent_pipeline_complete", False)
         ),
         "scene_risk_level": summary.get("scene_risk_level"),
-        "review_required": bool(summary.get("review_required", False)),
+        "review_required": review_required,
+        "attention_required": bool(
+            result.get("attention_required", review_required)
+        ),
+        "model_output_invalid_count": int(
+            review_summary.get("model_output_invalid_count") or 0
+        ),
     }
 
 
@@ -209,6 +219,30 @@ def create_app(settings: Settings | None = None, *, start_worker: bool = True) -
                 )
             )
         )
+        attention_required = sum(
+            1
+            for job in jobs
+            if bool(
+                (job.get("result") or {}).get(
+                    "attention_required",
+                    (job.get("result") or {}).get(
+                        "review_required",
+                        (((job.get("result") or {}).get("agent1") or {}).get("summary") or {}).get(
+                            "review_required", False
+                        ),
+                    ),
+                )
+            )
+        )
+        model_output_invalid = sum(
+            int(
+                (((job.get("result") or {}).get("review_summary") or {}).get(
+                    "model_output_invalid_count"
+                ))
+                or 0
+            )
+            for job in jobs
+        )
         return {
             "scope": (
                 "four_agent_remote_service"
@@ -221,6 +255,8 @@ def create_app(settings: Settings | None = None, *, start_worker: bool = True) -
                 "total": len(jobs),
                 "active": sum(1 for job in jobs if job["status"] in ACTIVE_JOB_STATUSES),
                 "review_required": review_required,
+                "attention_required": attention_required,
+                "model_output_invalid": model_output_invalid,
                 "succeeded": sum(1 for job in jobs if job["status"] == "succeeded"),
                 "partial_success": sum(
                     1 for job in jobs if job["status"] == "partial_success"

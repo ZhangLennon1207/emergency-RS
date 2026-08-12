@@ -1,5 +1,33 @@
 # 前端—总控后端当前可执行契约
 
+## Agent3-V5.2.1 状态兼容说明（2026-08-12）
+
+统一任务结果新增：
+
+```json
+{
+  "review_required": true,
+  "attention_required": true,
+  "review_summary": {
+    "agent1_review_required": false,
+    "human_review_required": true,
+    "human_review_claim_count": 1,
+    "model_output_invalid": true,
+    "model_output_invalid_count": 1,
+    "pending_claim_count": 2,
+    "other_pending_claim_count": 0
+  }
+}
+```
+
+- `review_required` 为兼容字段，现在只表示需要人工参与的复核，不再把模型 JSON/Schema 失败算作人工复核。
+- `attention_required` 表示存在任意待处理事项，包括人工复核、`model_output_invalid` 或尚未分类的 pending claim。
+- `model_output_invalid` 是输出契约失败，不代表遥感证据在语义上存在争议。
+- 前端应分别显示“待人工复核”和“模型输出异常”。
+- Agent3 版本优先读取远端响应，其次读取 `/api/v1/health` 的 `agent3.version`；当前运行时为 `Agent3-V5.2.1`。
+- Agent3 正式分组为 `accepted_claims`、`revised_claims`、`rejected_claims`、`pending_claims`。历史 `qualified_claims` 仅作为前端兼容输入。
+- Agent4 正式 Markdown 字段为 `markdown_report_zh` 和 `markdown_report_en`，前端分别提供中英文下载。
+
 > 更新日期：2026-08-10
 > 当前实现范围：Agent1/Agent2 本地真实 Adapter；Agent3/Agent4 条件远程编排已实现，等待与魏松辰真实服务完成 SSH 联调。
 > 前端只访问总控后端，不直接访问任一模型或魏松辰的电脑。
@@ -215,7 +243,7 @@ GET /api/v1/jobs/{job_id}/result
   },
   "agent3": {
     "status": "succeeded",
-    "source_version": "Agent3-V5.2",
+    "source_version": "Agent3-V5.2.1",
     "verified_evidence_package": {
       "schema_version": "agent3_verified_package_v1.1",
       "accepted_claims": [],

@@ -46,6 +46,16 @@ def infer_claim_type(claim_text: str) -> str:
         r"\b(road|roads|roadway|roadways|street|streets|route|routes|highway|highways|bridge|bridges)\b",
     )
 
+    # A scene-level statement that explicitly says no visible change is not a
+    # building count merely because it contains "no" and "buildings". Keep
+    # this post-processing rule narrow so genuine quantity claims such as
+    # "no buildings were damaged" retain their building-specific type.
+    if _contains(
+        text,
+        r"\b(no (?:visible|obvious|significant) changes?|remains? (?:relatively )?(?:undisturbed|unchanged))\b",
+    ):
+        return "generic_visual_change"
+
     if building and _contains(
         text,
         r"\b(how many|number|count|total|several|multiple|many|few|no|none|zero|percent|percentage|ratio|proportion)\b",
