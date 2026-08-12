@@ -180,6 +180,8 @@ def test_dashboard_aggregates_sqlite_job_state(tmp_path: Path) -> None:
         "total": 2,
         "active": 1,
         "review_required": 1,
+        "attention_required": 1,
+        "model_output_invalid": 0,
         "succeeded": 1,
         "partial_success": 0,
         "failed": 0,
@@ -449,6 +451,13 @@ def test_orchestrator_runs_remote_agent3_and_agent4_when_configured(
     class FakeAgent34Client:
         closed = False
 
+        def health(self):
+            return {
+                "status": "ok",
+                "agent3": {"version": "Agent3-V5.2.1"},
+                "agent4": {"version": "Agent4-V3"},
+            }
+
         def verify(self, **kwargs):
             seen["verify"] = kwargs
             claim = kwargs["payload"]["claim_list"][0]
@@ -520,6 +529,8 @@ def test_orchestrator_runs_remote_agent3_and_agent4_when_configured(
     assert job is not None
     assert job["status"] == "succeeded"
     assert job["result"]["four_agent_pipeline_complete"] is True
+    assert job["result"]["agent3"]["source_version"] == "Agent3-V5.2.1"
+    assert job["result"]["agent4"]["source_version"] == "Agent4-V3"
     assert job["result"]["scope"] == "four_agent_remote_service"
     assert job["result"]["agent2"]["verified"] is True
     claim = job["result"]["agent2"]["claim_list"][0]

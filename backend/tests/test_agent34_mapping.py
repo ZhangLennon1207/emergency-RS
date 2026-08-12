@@ -66,6 +66,11 @@ def sample_ledger():
         ("The roadway is visibly displaced.", "road_displacement"),
         ("Floodwater expanded across the scene.", "water_change"),
         ("Vegetation cover visibly decreased.", "vegetation_change"),
+        (
+            "The lower right region remains relatively undisturbed, with no visible changes to buildings or roads.",
+            "generic_visual_change",
+        ),
+        ("No buildings were damaged.", "building_damage_quantity"),
     ],
 )
 def test_claim_type_rules(text, expected):
