@@ -4,5 +4,6 @@ peft==0.17.1
 accelerate==1.11.0
 bitsandbytes==0.50.0
 qwen-vl-utils==0.0.14
+lm-format-enforcer==0.11.3
 Pillow==12.3.0
 safetensors==0.8.0

@@ -154,6 +154,22 @@ def build_verified_package(
                 sum(bool(x.get("human_review_required")) for x in audit_records),
 
             "model_output_invalid":
-                sum(x.get("resolution_state") == "model_output_invalid" for x in audit_records),
+                len({
+                    (x.get("scene_uid"), x.get("claim_id"))
+                    for x in audit_records
+                    if x.get("resolution_state") == "model_output_invalid"
+                }),
+
+            "model_output_invalid_counting_unit":
+                "unique_scene_uid_claim_id",
+
+            "format_repair_attempted":
+                sum(bool(x.get("generation_quality", {}).get("format_repair_attempted")) for x in audit_records),
+
+            "semantic_second_check_required":
+                sum(bool(x.get("generation_quality", {}).get("semantic_second_check_required")) for x in audit_records),
+
+            "semantic_second_check_executed":
+                sum(bool(x.get("generation_quality", {}).get("semantic_second_check_executed")) for x in audit_records),
         },
     }

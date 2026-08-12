@@ -12,6 +12,7 @@ from .model_runner import (
 from .postprocess_minimal_check import (
     postprocess_minimal_check,
 )
+from .output_schema import verification_json_schema
 
 from .schemas import (
     Agent3ContractError,
@@ -167,6 +168,10 @@ def _build_contract_request(request):
         + json.dumps(allowed_ids, ensure_ascii=False, separators=(",", ":"))
     ).strip()
     constrained["output_contract_version"] = "agent3-frozen-json-v3.1"
+    constrained["response_json_schema"] = verification_json_schema(
+        scene_uid=identity["scene_uid"], claim_id=identity["claim_id"],
+        claim_type=identity["claim_type"], evidence_ids=allowed_ids,
+    )
     return constrained
 
 
@@ -509,6 +514,10 @@ class Agent3Verifier:
         wrapped[
             "generation_quality"
         ] = {
+            "structured_decoding": True,
+
+            "structured_decoding_schema": "agent3-verification-3.1",
+
             "first_check_strict_json":
                 first_parsed[
                     "strict_json"
@@ -521,6 +530,15 @@ class Agent3Verifier:
 
             "retry_used":
                 raw_retry is not None or crop_retry_raw is not None,
+
+            "format_repair_attempted":
+                raw_retry is not None or crop_retry_raw is not None,
+
+            "semantic_second_check_required":
+                bool(policy["required"]),
+
+            "semantic_second_check_executed":
+                crop_check is not None,
 
             "crop_retry_used":
                 crop_retry_raw is not None,

@@ -327,10 +327,29 @@ class QwenVLAgent3Runner:
 
         generation_kwargs = {
             "do_sample": False,
+            "num_beams": 1,
             "max_new_tokens": self.config.max_new_tokens,
         }
         if bad_words_ids:
             generation_kwargs["bad_words_ids"] = bad_words_ids
+
+        schema = request.get("response_json_schema")
+        if schema:
+            try:
+                from lmformatenforcer import JsonSchemaParser
+                from lmformatenforcer.integrations.transformers import (
+                    build_transformers_prefix_allowed_tokens_fn,
+                )
+            except ImportError as exc:
+                raise RuntimeError(
+                    "lm-format-enforcer is required for Agent3 constrained decoding"
+                ) from exc
+            generation_kwargs["prefix_allowed_tokens_fn"] = (
+                build_transformers_prefix_allowed_tokens_fn(
+                    self._processor.tokenizer,
+                    JsonSchemaParser(schema),
+                )
+            )
 
         with torch.inference_mode():
             output_ids = (
