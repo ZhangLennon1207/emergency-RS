@@ -27,7 +27,7 @@ Agent1 evidence_ledger_core: 2.1
 Agent1 agent1_report_summary: 1.1
 Agent1 review_flags: 1.2
 Agent2 agent2_output: 1.1
-Agent3 evidence_verification: Agent3-V5.2
+Agent3 evidence_verification: Agent3-V5.2.1
 Agent4 report_generation: Agent4-V3
 ```
 
@@ -35,7 +35,7 @@ Agent4 report_generation: Agent4-V3
 
 | 当前流水线 | capability | 交接包源版本 |
 | --- | --- | --- |
-| Agent3 | `evidence_verification` | Agent3-V5.2 |
+| Agent3 | `evidence_verification` | Agent3-V5.2.1 |
 | Agent4 | `report_generation` | Agent4-V3 |
 
 后端和数据库必须同时保存 `agent_code`、`capability` 与 `source_version`。前端按 `capability` 决定展示区域，不根据源版本中的 Agent 数字决定位置。
@@ -432,7 +432,7 @@ verification_failed
 
 Agent3 未完成时必须返回 `null`，不能生成空的“可信结果”。
 
-当前 Agent3 为魏松辰交付的 Agent3-V5.2。跨电脑服务接口冻结为 `POST /api/v1/agent3/verify`，统一编排接口继续把归一化结果放在任务结果的 `verification` 字段中。
+当前 Agent3 为魏松辰交付的 Agent3-V5.2.1。跨电脑服务接口冻结为 `POST /api/v1/agent3/verify`，统一编排接口继续把归一化结果放在任务结果的 `verification` 字段中。
 
 请求核心字段：
 

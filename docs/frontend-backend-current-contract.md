@@ -215,7 +215,7 @@ GET /api/v1/jobs/{job_id}/result
   },
   "agent3": {
     "status": "succeeded",
-    "source_version": "Agent3-V5.2",
+    "source_version": "Agent3-V5.2.1",
     "verified_evidence_package": {
       "schema_version": "agent3_verified_package_v1.1",
       "accepted_claims": [],

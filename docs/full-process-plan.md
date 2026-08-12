@@ -630,7 +630,7 @@ POST   /api/v1/tasks/{task_id}/retry
 
 ```text
 Agent2 英文描述/claim_list + Agent1 客观证据
-→ Agent3-V5.2 根据 evidence_list 和 claim_list 逐条校验
+→ Agent3-V5.2.1 根据 evidence_list 和 claim_list 逐条校验
 → Agent3 生成 check_result 和 verified_evidence_package
 → Agent4-V3 仅读取 verified_evidence_package
 → Agent4 生成 platform_report_json 和固定五段式中文 Markdown 报告

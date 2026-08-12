@@ -33,6 +33,15 @@ def build_verified_package(
                     item.get(
                         "resolution_state"
                     ),
+
+                "human_review_required":
+                    bool(item.get("human_review_required")),
+
+                "failure_category":
+                    (
+                        item.get("audit", {})
+                        .get("failure_category")
+                    ),
             })
 
             continue
@@ -77,6 +86,15 @@ def build_verified_package(
                     "suggested_revision",
                     ""
                 ),
+
+            "resolution_state":
+                item.get("resolution_state"),
+
+            "human_review_required":
+                bool(item.get("human_review_required")),
+
+            "attention_required":
+                item.get("resolution_state") == "model_output_invalid",
         }
 
         if status == "supported":
@@ -131,5 +149,11 @@ def build_verified_package(
 
             "pending":
                 len(pending),
+
+            "human_review_required":
+                sum(bool(x.get("human_review_required")) for x in audit_records),
+
+            "model_output_invalid":
+                sum(x.get("resolution_state") == "model_output_invalid" for x in audit_records),
         },
     }

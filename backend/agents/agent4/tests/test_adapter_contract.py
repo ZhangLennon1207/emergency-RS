@@ -19,7 +19,13 @@ class FakeRuntime:
                 "limitations_and_nonconclusive_items": [],
             },
             "evidence_index": [],
-            "review_info": {"report_review_state": "unreviewed", "human_review_required": False},
+            "review_info": {
+                "report_review_state": "unreviewed",
+                "human_review_required": False,
+                "human_review_claim_count": 0,
+                "attention_required": False,
+                "invalid_model_output_count": 0,
+            },
             "disclaimer": {"zh-CN": "限制。", "en-US": "Limitations."},
         }
 

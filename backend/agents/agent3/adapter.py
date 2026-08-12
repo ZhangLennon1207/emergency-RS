@@ -1,4 +1,4 @@
-"""Stable Agent3-V5.2 entrypoint used by the shared orchestrator."""
+"""Stable Agent3-V5.2.1 entrypoint used by the shared orchestrator."""
 
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ class Agent3Adapter:
         return {
             "agent_code": "agent3",
             "capability": "evidence_verification",
-            "source_version": "Agent3-V5.2",
+            "source_version": "Agent3-V5.2.1",
             "runtime_schema_version": "3.1-runtime",
             "loaded": self._verifier is not None,
         }

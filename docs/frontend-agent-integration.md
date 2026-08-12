@@ -296,21 +296,21 @@ Agent3 尚未成功时，前端必须在 Agent2 文本上显示：
 
 ### Agent3
 
-当前项目 Agent3 为 `Agent3-V5.2`。前端使用：
+当前项目 Agent3 为 `Agent3-V5.2.1`。前端使用：
 
 ```json
 {
   "agent_code": "agent3",
   "capability": "evidence_verification",
   "source_agent_id": "agent3",
-  "source_version": "Agent3-V5.2"
+  "source_version": "Agent3-V5.2.1"
 }
 ```
 
 | 文件 | artifact_type | 前端用途 |
 | --- | --- | --- |
 | `verified_evidence_package.json` | `verified_evidence_package` | Agent4 报告生成的唯一可信事实输入 |
-| `run_manifest.json` | `agent3_run_manifest` | Agent3-V5.2 模型和运行追踪 |
+| `run_manifest.json` | `agent3_run_manifest` | Agent3-V5.2.1 模型和运行追踪 |
 
 每条 Claim 至少包含：
 

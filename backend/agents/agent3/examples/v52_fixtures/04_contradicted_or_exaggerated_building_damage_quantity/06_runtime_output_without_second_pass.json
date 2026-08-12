@@ -54,7 +54,7 @@
     ],
     "recommended_next_step": "finalize_first_check",
     "crop_region": null,
-    "model_version": "Agent3-V5.2",
+    "model_version": "Agent3-V5.2.1",
     "created_at": "<RUNTIME_TIMESTAMP>",
     "second_pass_auto_built": false
   },

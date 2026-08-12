@@ -1,6 +1,6 @@
 {
   "schema_version": "agent3_v52_claim_type_registry_v1",
-  "agent": "Agent3-V5.2",
+  "agent": "Agent3-V5.2.1",
   "capability": "evidence_verification",
   "claim_type_enum": [
     "agricultural_change",

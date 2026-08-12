@@ -15,7 +15,7 @@ class Agent3Config:
     load_in_4bit: bool = True
     device_map: str = "auto"
 
-    model_version: str = "agent3-final"
+    model_version: str = "Agent3-V5.2.1"
     schema_version: str = "3.1"
 
     @classmethod
@@ -72,6 +72,6 @@ class Agent3Config:
             ),
             model_version=os.environ.get(
                 "AGENT3_MODEL_VERSION",
-                "agent3-final"
+                "Agent3-V5.2.1"
             ),
         )

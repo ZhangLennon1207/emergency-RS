@@ -1,11 +1,11 @@
 import json
 import unittest
 
-from backend.agents.agent3.src.claim_verifier import (
+from src.claim_verifier import (
     Agent3Verifier,
 )
 
-from backend.agents.agent3.src.config import (
+from src.config import (
     Agent3Config,
 )
 
@@ -94,12 +94,14 @@ REQUEST = {
             "claim_id":
                 "C_TEST",
 
-            "structured_evidence": [
-                {
-                    "evidence_id": "B0001",
-                    "confidence": 0.95,
-                }
-            ],
+            "claim_type":
+                "building_damage_presence",
+
+            "structured_evidence": [{
+                "evidence_id": "B0001",
+                "evidence_type": "building_instance",
+                "finding": "The building is damaged.",
+            }],
         }),
 
     "images":
@@ -151,7 +153,7 @@ class RuntimeResilienceTest(
             ]
         )
 
-    def test_double_failure_routes_to_human(
+    def test_double_failure_is_model_output_invalid(
         self,
     ):
         runner = SequenceRunner([
@@ -168,7 +170,7 @@ class RuntimeResilienceTest(
             REQUEST
         )
 
-        self.assertTrue(
+        self.assertFalse(
             result[
                 "human_review_required"
             ]
@@ -178,7 +180,7 @@ class RuntimeResilienceTest(
             result[
                 "resolution_state"
             ],
-            "human_review_required",
+                "model_output_invalid",
         )
 
         self.assertIsNone(
@@ -186,6 +188,55 @@ class RuntimeResilienceTest(
                 "final_check"
             ]
         )
+
+        self.assertEqual(
+            result["audit"]["failure_category"],
+            "format_contract",
+        )
+
+    def test_contract_is_injected_without_changing_request(self):
+        valid = json.dumps(VALID)
+        runner = SequenceRunner([valid])
+        seen = []
+
+        def capture(request):
+            seen.append(request)
+            return valid
+
+        runner.generate = capture
+        verifier = Agent3Verifier(config=config(), runner=runner)
+        original = dict(REQUEST)
+        verifier.verify(REQUEST)
+
+        self.assertEqual(REQUEST, original)
+        self.assertEqual(
+            seen[0]["output_contract_version"],
+            "agent3-frozen-json-v3.1",
+        )
+        self.assertIn("Never reproduce the input object", seen[0]["instruction"])
+
+    def test_crop_check_gets_contract_retry(self):
+        first = dict(VALID)
+        first["support_status"] = "partially_supported"
+        first["second_check"] = {
+            "required": True,
+            "trigger_reasons": ["low_confidence"],
+            "recommended_inputs": ["localized_crop"],
+            "recommended_next_step": "run_second_check",
+        }
+        crop = dict(VALID)
+        crop["support_status"] = "partially_supported"
+        runner = SequenceRunner([
+            json.dumps(first),
+            "legacy crop output",
+            json.dumps(crop),
+        ])
+        verifier = Agent3Verifier(config=config(), runner=runner)
+        request = dict(REQUEST)
+        request["second_pass"] = dict(REQUEST)
+        result = verifier.verify(request)
+        self.assertEqual(result["resolution_state"], "second_check_agreement")
+        self.assertTrue(result["generation_quality"]["crop_retry_used"])
 
 
 if __name__ == "__main__":

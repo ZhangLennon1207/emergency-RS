@@ -16,7 +16,7 @@
 | 名称 | 已有引用数 | 当前处理 |
 | --- | ---: | --- |
 | `qualified_claims` | 7 | 模型正式字段改为 `revised_claims`，不伪造旧字段 |
-| `revised_claims` | 0 | Agent3-V5.2 正式输出 |
+| `revised_claims` | 0 | Agent3-V5.2.1 正式输出 |
 | `key_findings` | 4 | 模型正式结构改为 `platform_report_json.sections.*` |
 | `markdown_report` | 11 | 暂时返回中文兼容别名 |
 | `markdown_report_zh/en` | 0 | Agent4-V3 正式双语输出 |

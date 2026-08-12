@@ -1,5 +1,4 @@
-RISK_STATUSES = {
-    "partially_supported",
+CONFLICT_STATUSES = {
     "contradicted",
     "exaggerated",
 }
@@ -71,10 +70,14 @@ def decide_second_check(
         "support_status"
     )
 
-    if status in RISK_STATUSES:
+    if status in CONFLICT_STATUSES:
         reasons.append(
             f"boundary_status:{status}"
         )
+
+    # partially_supported is not, by itself, a reason to rerun the model.
+    # It triggers only when the model explicitly requests it, evidence IDs
+    # are absent, or calibrated evidence falls in a low/uncertain interval.
 
     evidence_ids = verification.get(
         "evidence_ids",

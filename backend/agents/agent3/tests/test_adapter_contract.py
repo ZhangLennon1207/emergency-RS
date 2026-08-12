@@ -5,7 +5,7 @@ from backend.agents.agent3.src.verified_package_bridge import enrich_verified_pa
 
 def test_adapter_is_lazy_and_run_is_public():
     adapter = Agent3Adapter(Agent3Config(base_model_path="unused", adapter_path="unused"))
-    assert adapter.health()["source_version"] == "Agent3-V5.2"
+    assert adapter.health()["source_version"] == "Agent3-V5.2.1"
     assert adapter.health()["loaded"] is False
     assert callable(run)
 

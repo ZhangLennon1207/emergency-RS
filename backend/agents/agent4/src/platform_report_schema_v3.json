@@ -84,8 +84,19 @@
       "type": "object",
       "required": [
         "report_review_state",
-        "human_review_required"
-      ]
+        "human_review_required",
+        "human_review_claim_count",
+        "attention_required",
+        "invalid_model_output_count"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "report_review_state": {"type": "string"},
+        "human_review_required": {"type": "boolean"},
+        "human_review_claim_count": {"type": "integer", "minimum": 0},
+        "attention_required": {"type": "boolean"},
+        "invalid_model_output_count": {"type": "integer", "minimum": 0}
+      }
     },
     "disclaimer": {
       "$ref": "#/$defs/bilingual_text"

@@ -158,6 +158,18 @@ def assemble_report(
         []
     )
 
+    audit_records = source_package.get("audit_records", [])
+    semantic_review_count = sum(
+        bool(item.get("human_review_required"))
+        for item in audit_records
+        if isinstance(item, dict)
+    )
+    invalid_output_count = sum(
+        item.get("resolution_state") == "model_output_invalid"
+        for item in audit_records
+        if isinstance(item, dict)
+    )
+
     scene_uid = (
         source_package
         .get(
@@ -209,7 +221,16 @@ def assemble_report(
                 "unreviewed",
 
             "human_review_required":
-                bool(pending),
+                bool(semantic_review_count),
+
+            "human_review_claim_count":
+                semantic_review_count,
+
+            "attention_required":
+                bool(invalid_output_count),
+
+            "invalid_model_output_count":
+                invalid_output_count,
         },
 
         "disclaimer": {

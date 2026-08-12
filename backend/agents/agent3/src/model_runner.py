@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 from .config import Agent3Config
@@ -134,6 +135,11 @@ class QwenVLAgent3Runner:
                 f"Image not found: {path}"
             )
 
+        # qwen-vl-utils 0.0.14 strips exactly seven characters from file://
+        # URIs. On Windows that turns file:///D:/... into /D:/..., which PIL
+        # cannot open. Direct absolute paths are supported by the same helper.
+        if os.name == "nt":
+            return str(path)
         return path.as_uri()
 
     def _build_content(
@@ -299,15 +305,38 @@ class QwenVLAgent3Runner:
             )
         )
 
+        forbidden_output_keys = (
+            "structured_evidence",
+            "supporting_statistics",
+            "supported_reasons",
+            "required_agent",
+            "required_evidence",
+            "expected_findings",
+            "allowed_evidence_ids",
+            "supported_status",
+            "struct_evidence",
+        )
+        bad_words_ids = []
+        tokenizer = getattr(self._processor, "tokenizer", None)
+        if tokenizer is not None:
+            for key in forbidden_output_keys:
+                for form in (key, f'"{key}"'):
+                    token_ids = tokenizer.encode(form, add_special_tokens=False)
+                    if token_ids:
+                        bad_words_ids.append(token_ids)
+
+        generation_kwargs = {
+            "do_sample": False,
+            "max_new_tokens": self.config.max_new_tokens,
+        }
+        if bad_words_ids:
+            generation_kwargs["bad_words_ids"] = bad_words_ids
+
         with torch.inference_mode():
             output_ids = (
                 self._model.generate(
                     **model_inputs,
-                    do_sample=False,
-                    max_new_tokens=(
-                        self.config
-                        .max_new_tokens
-                    ),
+                    **generation_kwargs,
                 )
             )
 

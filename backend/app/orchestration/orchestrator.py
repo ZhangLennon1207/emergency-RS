@@ -294,7 +294,7 @@ class JobOrchestrator:
             **sanitized,
             "agent_code": "agent3",
             "capability": "evidence_verification",
-            "source_version": "Agent3-V5.2",
+            "source_version": "Agent3-V5.2.1",
             "status": "succeeded",
             "artifacts": [
                 {

@@ -35,7 +35,13 @@ class MockAgent4:
                 "key_disaster_indicators": [], "regional_assessment": [],
                 "evidence_support_and_consistency_check": [], "limitations_and_nonconclusive_items": []},
                 "evidence_index": [],
-                "review_info": {"report_review_state": "unreviewed", "human_review_required": False},
+                "review_info": {
+                    "report_review_state": "unreviewed",
+                    "human_review_required": False,
+                    "human_review_claim_count": 0,
+                    "attention_required": False,
+                    "invalid_model_output_count": 0,
+                },
                 "disclaimer": {"zh-CN": "本报告不替代现场核查或权威结论。",
                                "en-US": "This report does not replace field verification."}}
 

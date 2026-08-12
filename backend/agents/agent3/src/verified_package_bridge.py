@@ -1,5 +1,5 @@
 """
-Deterministic bridge between Agent3-V5.2 verification output
+Deterministic bridge between Agent3-V5.2.1 verification output
 and Agent4-V3 verified_evidence_package input.
 
 This module does NOT modify Agent3 verification decisions. It only

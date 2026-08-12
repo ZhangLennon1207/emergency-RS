@@ -2,7 +2,7 @@
   "agent_code": "agent3",
   "capability": "evidence_verification",
   "display_name": "证据可信校验智能体",
-  "source_version": "Agent3-V5.2",
+  "source_version": "Agent3-V5.2.1",
   "historical_source_version": "Agent4-V4",
   "entrypoint": "backend.agents.agent3.adapter:run",
   "owner": "weimiao828",

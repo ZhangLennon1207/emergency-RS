@@ -1,4 +1,4 @@
-"""Build an Agent3-V5.2 second-pass request after the first check.
+"""Build an Agent3-V5.2.1 second-pass request after the first check.
 
 The HTTP/service layer may attach a private ``second_pass_context`` to a
 runtime request. The context is never sent to the model. When the first

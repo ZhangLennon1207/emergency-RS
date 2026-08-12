@@ -1,6 +1,6 @@
 {
   "agent": "Agent3",
-  "version": "Agent3-V5.2",
+  "version": "Agent3-V5.2.1",
   "capability": "evidence_verification",
   "base_model": "Qwen2.5-VL-7B-Instruct",
   "lora_filename": "adapter_model.safetensors",

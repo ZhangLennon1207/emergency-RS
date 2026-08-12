@@ -1,5 +1,5 @@
 """
-Deterministic visual crop builder for Agent3-V5.2 second checks.
+Deterministic visual crop builder for Agent3-V5.2.1 second checks.
 
 The builder never changes a verification decision. It crops aligned
 visual artifacts using an Agent1 evidence bbox already present in the

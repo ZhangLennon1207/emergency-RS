@@ -9,7 +9,7 @@
 
 | 当前系统 | capability | 历史模型版本 |
 | --- | --- | --- |
-| Agent3 | `evidence_verification` | Agent3-V5.2 |
+| Agent3 | `evidence_verification` | Agent3-V5.2.1 |
 | Agent4 | `report_generation` | Agent4-V3 |
 
 新 API、GitHub 目录、日志和前端统一使用 Agent3/Agent4。历史配置、权重目录和实验记录可以保留 Agent4/Agent5 文件名，通过 `source_version` 追踪，不做全局重命名。
@@ -23,7 +23,7 @@ backend/
 ├── agents/
 │   ├── agent3/
 │   │   ├── adapter.py
-│   │   ├── runtime/                  # Agent3-V5.2 稳定源码，不含权重
+│   │   ├── runtime/                  # Agent3-V5.2.1 稳定源码，不含权重
 │   │   ├── prompts/evidence_verification.txt
 │   │   ├── schemas/
 │   │   ├── model_metadata.json
@@ -72,7 +72,7 @@ AGENT34_PID_FILE=<GPU主机上的私有PID文件>
 AGENT34_LOG_FILE=<GPU主机上的私有日志文件>
 AGENT34_SHARED_TOKEN=<双方私下交换的高强度随机Token>
 AGENT3_BASE_MODEL=<Agent3基座模型目录>
-AGENT3_ADAPTER=<Agent3-V5.2 LoRA目录>
+AGENT3_ADAPTER=<Agent3-V5.2.1 LoRA目录>
 AGENT4_BASE_MODEL=<Agent4基座模型目录>
 AGENT4_ADAPTER=<Agent4-V3 LoRA目录>
 ```
@@ -182,7 +182,7 @@ Authorization: Bearer <AGENT34_SHARED_TOKEN>
 1. 校验双图可解码且成对。
 2. 校验 `job_id`、`sample_id`、claim/evidence ID 唯一。
 3. HTTP 一次接收完整 `claim_list`。
-4. Runtime 内部按 Agent3-V5.2 稳定逻辑逐 claim 调用。
+4. Runtime 内部按 Agent3-V5.2.1 稳定逻辑逐 claim 调用。
 5. 同一场景内不得为每条 claim 重新加载一次 7B 基座模型。
 6. 保存每条 raw output，再运行后处理、校验和聚合。
 7. 模型返回的 `evidence_ids` 必须属于该 claim 输入的证据集合。
@@ -307,7 +307,7 @@ English: Executive Summary / Key Disaster Indicators / Regional Assessment / Evi
 原始 Agent1 evidence_ledger_core.json
 → 总控生成的标准 evidence_list
 → claim_list
-→ Agent3-V5.2 raw/normalized（raw 仅保存在本地运行目录）
+→ Agent3-V5.2.1 raw/normalized（raw 仅保存在本地运行目录）
 → verified_evidence_package
 ```
 

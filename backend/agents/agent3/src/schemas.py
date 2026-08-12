@@ -50,6 +50,20 @@ def validate_verification(check):
             f"invalid support_status: {status!r}"
         )
 
+    if check.get("schema_version") != "3.1":
+        errors.append("schema_version must be '3.1'")
+
+    if not isinstance(check.get("reason"), str):
+        errors.append("reason must be a string")
+
+    if not isinstance(check.get("suggested_revision"), str):
+        errors.append("suggested_revision must be a string")
+
+    if check.get("human_review_state") not in {
+        "unreviewed", "reviewed_accepted", "reviewed_revised", "reviewed_rejected"
+    }:
+        errors.append("invalid human_review_state")
+
     evidence_ids = check.get(
         "evidence_ids"
     )
@@ -103,5 +117,13 @@ def validate_verification(check):
         errors.append(
             "second_check must be an object"
         )
+    else:
+        if not isinstance(second.get("required"), bool):
+            errors.append("second_check.required must be boolean")
+        for key in ("trigger_reasons", "recommended_inputs"):
+            if not isinstance(second.get(key), list):
+                errors.append(f"second_check.{key} must be a list")
+        if not isinstance(second.get("recommended_next_step"), str):
+            errors.append("second_check.recommended_next_step must be a string")
 
     return errors

@@ -1,6 +1,17 @@
 import json
 import re
 
+import torch
+
+from peft import PeftModel
+
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    BitsAndBytesConfig,
+)
+
+
 TAG_RE = re.compile(
     r"^\s*<zh-CN>\s*(.*?)\s*</zh-CN>\s*"
     r"<en-US>\s*(.*?)\s*</en-US>\s*$",
@@ -173,11 +184,6 @@ class Agent4SlotRunner:
         adapter,
         system_prompt,
     ):
-        import torch
-        from peft import PeftModel
-        from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-
-        self._torch = torch
         self.base_model = (
             base_model
         )
@@ -211,7 +217,12 @@ class Agent4SlotRunner:
             AutoModelForCausalLM
             .from_pretrained(
                 base_model,
-                device_map="auto",
+                # The 4-bit text model fits on the supported single-GPU
+                # runtime.  Pin it to GPU 0 so Accelerate does not create a
+                # partial CPU/disk map before PEFT attaches the LoRA adapter.
+                # That partial map makes PeftModel require an offload_dir on
+                # 8 GB Windows GPUs even though the quantized model fits.
+                device_map={"": 0},
                 trust_remote_code=True,
                 torch_dtype=torch.bfloat16,
                 quantization_config=quant,
@@ -299,7 +310,7 @@ class Agent4SlotRunner:
             else 240
         )
 
-        with self._torch.inference_mode():
+        with torch.inference_mode():
 
             result = self.model.generate(
                 **inputs,

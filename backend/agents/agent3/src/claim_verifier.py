@@ -60,6 +60,27 @@ human_review_state
 """.strip()
 
 
+FROZEN_OUTPUT_CONTRACT = """
+FROZEN OUTPUT CONTRACT (Agent3-V5.2.1):
+
+Return exactly one compact JSON object with ONLY these root fields:
+schema_version, scene_uid, claim_id, claim_type, support_status,
+evidence_ids, reason, suggested_revision, second_check,
+human_review_state.
+
+The second_check object may contain ONLY:
+required, trigger_reasons, recommended_inputs, recommended_next_step.
+
+Never reproduce the input object or any evidence object. In particular,
+never output structured_evidence, supporting_statistics, supported_reasons,
+required_agent, required_evidence, expected_findings, or other legacy fields.
+Use only evidence IDs supplied in allowed_evidence_ids.
+
+Exact shape:
+{"schema_version":"3.1","scene_uid":"<scene_uid>","claim_id":"<claim_id>","claim_type":"<claim_type>","support_status":"<one allowed status>","evidence_ids":[],"reason":"<short reason>","suggested_revision":"","second_check":{"required":false,"trigger_reasons":[],"recommended_inputs":[],"recommended_next_step":""},"human_review_state":"unreviewed"}
+""".strip()
+
+
 def _extract_identity(
     request,
 ):
@@ -120,6 +141,35 @@ def _build_format_retry(
     return retry
 
 
+def _build_contract_request(request):
+    """Attach the frozen response contract without changing HTTP payloads."""
+    constrained = copy.deepcopy(request)
+    inp = _request_input(constrained)
+    evidence = inp.get("structured_evidence", [])
+    allowed_ids = [
+        str(item.get("evidence_id"))
+        for item in evidence
+        if isinstance(item, dict) and item.get("evidence_id") is not None
+    ]
+    identity = {
+        "scene_uid": inp.get("scene_uid"),
+        "claim_id": inp.get("claim_id"),
+        "claim_type": inp.get("claim_type"),
+    }
+    original = str(constrained.get("instruction", "")).strip()
+    constrained["instruction"] = (
+        original
+        + "\n\n"
+        + FROZEN_OUTPUT_CONTRACT
+        + "\n\nREQUEST IDENTITY (copy these values exactly):\n"
+        + json.dumps(identity, ensure_ascii=False, separators=(",", ":"))
+        + "\nYou may cite only these evidence IDs: "
+        + json.dumps(allowed_ids, ensure_ascii=False, separators=(",", ":"))
+    ).strip()
+    constrained["output_contract_version"] = "agent3-frozen-json-v3.1"
+    return constrained
+
+
 def _request_input(request):
     value = request.get("input", {})
     if isinstance(value, dict):
@@ -148,7 +198,7 @@ def _constrain_evidence(check, allowed_ids):
     return result
 
 
-def _human_review_fallback(
+def _invalid_output_fallback(
     request,
     *,
     raw_first,
@@ -195,10 +245,10 @@ def _human_review_fallback(
             None,
 
         "resolution_state":
-            "human_review_required",
+            "model_output_invalid",
 
         "human_review_required":
-            True,
+            False,
 
         "audit": {
             "trigger_reasons": [
@@ -209,7 +259,10 @@ def _human_review_fallback(
                 [],
 
             "recommended_next_step":
-                "human_review",
+                "repair_model_output_contract",
+
+            "failure_category":
+                "format_contract",
 
             "crop_region":
                 request.get(
@@ -259,9 +312,11 @@ class Agent3Verifier:
         self,
         request,
     ):
+        contract_request = _build_contract_request(request)
+
         raw_first = (
             self.runner.generate(
-                request
+                contract_request
             )
         )
 
@@ -284,7 +339,7 @@ class Agent3Verifier:
         # One format-only retry.
         retry_request = (
             _build_format_retry(
-                request
+                contract_request
             )
         )
 
@@ -331,7 +386,7 @@ class Agent3Verifier:
         # because of malformed model output.
         # -----------------------------------------
         if first_parsed is None:
-            return _human_review_fallback(
+            return _invalid_output_fallback(
                 request,
                 raw_first=raw_first,
                 raw_retry=raw_retry,
@@ -364,6 +419,7 @@ class Agent3Verifier:
 
         crop_check = None
         crop_raw = None
+        crop_retry_raw = None
 
         second_pass = request.get(
             "second_pass"
@@ -392,9 +448,10 @@ class Agent3Verifier:
             policy["required"]
             and second_pass
         ):
+            contract_second_pass = _build_contract_request(second_pass)
             crop_raw = (
                 self.runner.generate(
-                    second_pass
+                    contract_second_pass
                 )
             )
 
@@ -409,22 +466,23 @@ class Agent3Verifier:
                 crop_check = _constrain_evidence(crop_check, allowed_ids)
 
             except Agent3ContractError:
-                return (
-                    _human_review_fallback(
+                crop_retry_raw = self.runner.generate(
+                    _build_format_retry(contract_second_pass)
+                )
+                try:
+                    crop_check = postprocess_minimal_check(
+                        crop_retry_raw
+                    )["verification"]
+                    crop_check = _constrain_evidence(crop_check, allowed_ids)
+                except Agent3ContractError:
+                    return _invalid_output_fallback(
                         request,
-                        raw_first=raw_first,
-                        raw_retry=crop_raw,
-                        reason=(
-                            "crop_check_"
-                            "unrecoverable_json"
-                        ),
-                        model_version=(
-                            self.config
-                            .model_version
-                        ),
+                        raw_first=crop_raw,
+                        raw_retry=crop_retry_raw,
+                        reason="crop_check_unrecoverable_json",
+                        model_version=self.config.model_version,
                         first_check=first,
                     )
-                )
 
         actual_crop_region = request.get("crop_region")
         if second_pass:
@@ -462,7 +520,10 @@ class Agent3Verifier:
                 ],
 
             "retry_used":
-                raw_retry is not None,
+                raw_retry is not None or crop_retry_raw is not None,
+
+            "crop_retry_used":
+                crop_retry_raw is not None,
 
             "parse_failure":
                 False,

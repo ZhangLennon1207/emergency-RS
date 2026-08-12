@@ -1,6 +1,6 @@
 # Agent3：证据可信校验（V5.2）
 
-当前正式版本为 `Agent3-V5.2`，能力名保持 `evidence_verification`；
+当前正式版本为 `Agent3-V5.2.1`，能力名保持 `evidence_verification`；
 历史实验来源 `Agent4-V4` 仅记录在 manifest，不再作为 HTTP `source_version`。
 
 模块消费 Agent2 已拆分的英文 `claim_list`、Agent1 `evidence_list` 以及灾前/灾后
