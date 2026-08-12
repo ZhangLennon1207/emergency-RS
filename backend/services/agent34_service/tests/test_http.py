@@ -1,6 +1,7 @@
 import io
 import json
 import os
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 from PIL import Image
@@ -127,7 +128,64 @@ def test_verify_rejects_unknown_evidence(tmp_path):
         },
     )
     assert response.status_code == 422
-    assert response.json()["error"]["code"] == "INVALID_REQUEST"
+    assert response.json()["error"]["code"] == "UNKNOWN_EVIDENCE_ID"
+
+
+def test_empty_claim_list_has_specific_error(tmp_path):
+    image = png_bytes()
+    payload = {"job_id": "J1", "sample_id": "S1", "claim_list": [], "evidence_list": []}
+    response = client(tmp_path).post(
+        "/api/v1/agent3/verify", headers={"Authorization": "Bearer secret"},
+        files={"payload": ("payload.json", json.dumps(payload).encode(), "application/json"),
+               "pre_image": ("pre.png", image, "image/png"),
+               "post_image": ("post.png", image, "image/png")},
+    )
+    assert response.status_code == 422
+    assert response.json()["error"] == {
+        "code": "EMPTY_CLAIM_LIST",
+        "message": "claim_list must contain at least one claim",
+        "retryable": False,
+    }
+
+
+def test_model_not_ready_is_normalized(tmp_path, monkeypatch):
+    c = client(tmp_path)
+    monkeypatch.setattr(c.app.state.runtime, "agent4", lambda: (_ for _ in ()).throw(FileNotFoundError("private path")))
+    response = c.post("/api/v1/agent4/report", headers={"Authorization": "Bearer secret"}, json={
+        "job_id": "J1", "sample_id": "S1", "verified_evidence_package": {},
+    })
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "MODEL_NOT_READY"
+    assert "private path" not in response.text
+
+
+def test_model_timeout_is_normalized(tmp_path, monkeypatch):
+    c = client(tmp_path)
+    class TimeoutRuntime:
+        def generate_report(self, _package):
+            raise TimeoutError("private prompt text")
+    monkeypatch.setattr(c.app.state.runtime, "agent4", lambda: TimeoutRuntime())
+    response = c.post("/api/v1/agent4/report", headers={"Authorization": "Bearer secret"}, json={
+        "job_id": "J1", "sample_id": "S1", "verified_evidence_package": {},
+    })
+    assert response.status_code == 504
+    assert response.json()["error"]["code"] == "MODEL_TIMEOUT"
+    assert response.json()["error"]["retryable"] is True
+    assert "private prompt text" not in response.text
+
+
+def test_internal_error_is_normalized(tmp_path, monkeypatch):
+    c = client(tmp_path)
+    class BrokenRuntime:
+        def generate_report(self, _package):
+            raise ValueError("private implementation detail")
+    monkeypatch.setattr(c.app.state.runtime, "agent4", lambda: BrokenRuntime())
+    response = c.post("/api/v1/agent4/report", headers={"Authorization": "Bearer secret"}, json={
+        "job_id": "J1", "sample_id": "S1", "verified_evidence_package": {},
+    })
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "INTERNAL_ERROR"
+    assert "private implementation detail" not in response.text
 
 
 def test_verify_rejects_bad_image(tmp_path):

@@ -16,6 +16,8 @@ from starlette.datastructures import UploadFile
 
 from backend.agents.agent3.src.verified_package_bridge import enrich_verified_package
 from .auth import require_bearer
+from .audit_privacy import persist_private_outputs, public_package
+from .errors import ERRORS, runtime_code, service_error, validation_code
 from .request_builder import build_requests
 from .runtime_manager import RuntimeManager
 from .schemas import ReportPayload, VerifyPayload
@@ -31,6 +33,10 @@ def _error(code: str, message: str, retryable: bool, status_code: int) -> HTTPEx
         status_code=status_code,
         detail={"code": code, "message": message, "retryable": retryable},
     )
+
+
+def _runtime_error(exc: Exception) -> HTTPException:
+    return service_error(runtime_code(exc))
 
 
 def _markdown(report: dict[str, Any], lang: str) -> str:
@@ -52,8 +58,10 @@ async def _multipart(request: Request) -> tuple[VerifyPayload, dict[str, bytes]]
         else:
             raw_payload = str(payload_part)
         payload = VerifyPayload.model_validate(json.loads(raw_payload))
-    except (UnicodeDecodeError, json.JSONDecodeError, ValidationError) as exc:
-        raise _error("INVALID_REQUEST", "payload is not valid Agent3 JSON", False, 422) from exc
+    except ValidationError as exc:
+        raise service_error(validation_code(exc)) from exc
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise service_error("INVALID_REQUEST") from exc
 
     result: dict[str, bytes] = {}
     for name in (
@@ -72,7 +80,7 @@ async def _multipart(request: Request) -> tuple[VerifyPayload, dict[str, bytes]]
             with Image.open(io.BytesIO(data)) as image:
                 image.verify()
         except Exception as exc:
-            raise _error("IMAGE_DECODE_FAILED", f"{name} cannot be decoded", False, 422) from exc
+            raise service_error("IMAGE_DECODE_FAILED") from exc
         result[name] = data
     return payload, result
 
@@ -96,11 +104,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return JSONResponse(status_code=exc.status_code, content={"error": body})
 
     @app.exception_handler(RequestValidationError)
-    async def validation_error(_request: Request, _exc: RequestValidationError):
+    async def validation_error(_request: Request, exc: RequestValidationError):
+        code = "EMPTY_CLAIM_LIST" if any(
+            "claim_list" in tuple(str(item) for item in error.get("loc", ()))
+            and error.get("type") == "too_short" for error in exc.errors()
+        ) else "INVALID_REQUEST"
+        spec = ERRORS[code]
         return JSONResponse(
-            status_code=422,
-            content={"error": {"code": "INVALID_REQUEST", "message": "request validation failed", "retryable": False}},
+            status_code=spec.status,
+            content={"error": {"code": code, "message": spec.message, "retryable": spec.retryable}},
         )
+
+    @app.exception_handler(Exception)
+    async def unexpected_error(_request: Request, _exc: Exception):
+        spec = ERRORS["INTERNAL_ERROR"]
+        return JSONResponse(status_code=spec.status, content={
+            "error": {"code": "INTERNAL_ERROR", "message": spec.message, "retryable": spec.retryable},
+        })
 
     @app.get("/api/v1/health")
     def health():
@@ -137,13 +157,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 assets[name] = target
             requests = build_requests(parsed, assets, work)
             if not app.state.runtime.lock.acquire(blocking=False):
-                raise _error("SERVICE_BUSY", "Agent34 runtime is busy", True, 503)
+                raise service_error("SERVICE_BUSY")
             try:
                 package = app.state.runtime.agent3().verify_batch(requests)
                 app.state.runtime.mark_inference_success("agent3")
             except Exception as exc:
                 app.state.runtime.mark_inference_failure("agent3", exc)
-                raise
+                raise _runtime_error(exc) from exc
             finally:
                 app.state.runtime.lock.release()
             package = enrich_verified_package(
@@ -151,6 +171,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 sample_id=parsed.sample_id,
                 claim_list=[item.model_dump() for item in parsed.claim_list],
             )
+            private_count = persist_private_outputs(
+                app.state.settings.request_root,
+                job_id=parsed.job_id,
+                sample_id=parsed.sample_id,
+                payload=package,
+            )
+            package = public_package(package)
             return {
                 "contract_version": CONTRACT_VERSION,
                 "pipeline_version": PIPELINE_VERSION,
@@ -162,6 +189,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "runtime_version": "agent3-v5.2.1-runtime-3.1",
                 "status": "succeeded",
                 "check_result": package.get("audit_records", []),
+                "private_audit": {
+                    "raw_output_retained": private_count > 0,
+                    "raw_output_exposed": False,
+                },
                 "verified_evidence_package": package,
             }
         finally:
@@ -171,19 +202,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def report(payload: ReportPayload):
         from backend.agents.agent4.src.validate_report import validate_report
         if not app.state.runtime.lock.acquire(blocking=False):
-            raise _error("SERVICE_BUSY", "Agent34 runtime is busy", True, 503)
+            raise service_error("SERVICE_BUSY")
         try:
             platform_report = app.state.runtime.agent4().generate_report(payload.verified_evidence_package)
             app.state.runtime.mark_inference_success("agent4")
         except Exception as exc:
             app.state.runtime.mark_inference_failure("agent4", exc)
-            raise
+            raise _runtime_error(exc) from exc
         finally:
             app.state.runtime.lock.release()
         schema = Path(__file__).resolve().parents[2] / "agents" / "agent4" / "src" / "platform_report_schema_v3.json"
         errors = validate_report(platform_report, schema)
         if errors:
-            raise _error("MODEL_OUTPUT_INVALID", "Agent4 output failed schema validation", False, 502)
+            raise service_error("MODEL_OUTPUT_INVALID")
         markdown_zh = _markdown(platform_report, "zh-CN")
         markdown_en = _markdown(platform_report, "en-US")
         return {
