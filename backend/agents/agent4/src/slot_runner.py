@@ -3,15 +3,6 @@ import re
 
 import torch
 
-from peft import PeftModel
-
-from transformers import (
-    AutoModelForCausalLM,
-    AutoTokenizer,
-    BitsAndBytesConfig,
-)
-
-
 TAG_RE = re.compile(
     r"^\s*<zh-CN>\s*(.*?)\s*</zh-CN>\s*"
     r"<en-US>\s*(.*?)\s*</en-US>\s*$",
@@ -184,6 +175,11 @@ class Agent4SlotRunner:
         adapter,
         system_prompt,
     ):
+        # Keep this module importable in the controller and lightweight CI.
+        # GPU-only libraries are required only when a real model is loaded.
+        from peft import PeftModel
+        from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+
         self.base_model = (
             base_model
         )

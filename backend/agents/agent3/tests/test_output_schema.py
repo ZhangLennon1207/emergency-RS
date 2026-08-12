@@ -1,6 +1,6 @@
 from lmformatenforcer import JsonSchemaParser
 
-from src.output_schema import verification_json_schema
+from backend.agents.agent3.src.output_schema import verification_json_schema
 
 
 def test_frozen_schema_is_supported_by_constraint_parser():

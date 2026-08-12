@@ -1,7 +1,7 @@
 import json
 import unittest
 
-from src.postprocess_minimal_check import (
+from backend.agents.agent3.src.postprocess_minimal_check import (
     postprocess_minimal_check,
 )
 

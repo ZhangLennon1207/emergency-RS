@@ -1,11 +1,11 @@
 import json
 import unittest
 
-from src.claim_verifier import (
+from backend.agents.agent3.src.claim_verifier import (
     Agent3Verifier,
 )
 
-from src.config import (
+from backend.agents.agent3.src.config import (
     Agent3Config,
 )
 

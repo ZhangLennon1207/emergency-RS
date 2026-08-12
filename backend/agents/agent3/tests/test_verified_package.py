@@ -1,6 +1,6 @@
 import unittest
 
-from src.build_verified_package import (
+from backend.agents.agent3.src.build_verified_package import (
     build_verified_package,
 )
 

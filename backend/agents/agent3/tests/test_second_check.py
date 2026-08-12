@@ -1,6 +1,6 @@
 import unittest
 
-from src.second_check_policy import (
+from backend.agents.agent3.src.second_check_policy import (
     decide_second_check,
 )
 
