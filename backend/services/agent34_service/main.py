@@ -9,13 +9,14 @@ from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from PIL import Image
 from pydantic import ValidationError
 from starlette.datastructures import UploadFile
 
 from backend.agents.agent3.src.verified_package_bridge import enrich_verified_package
 from .auth import require_bearer
+from .artifact_store import persist_second_check_artifacts, resolve_artifact
 from .audit_privacy import persist_private_outputs, public_package
 from .errors import ERRORS, runtime_code, service_error, validation_code
 from .request_builder import build_requests
@@ -135,6 +136,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "pipeline_version": PIPELINE_VERSION,
             "agent3_version": "Agent3-V5.2.1",
             "agent4_version": "Agent4-V3",
+            "agent3_display_name": "证据约束核验智能体",
+            "agent4_display_name": "报告生成智能体",
             "agent3_configured": agent3["configured"],
             "agent4_configured": agent4["configured"],
             "agent3_loaded": agent3["loaded"],
@@ -144,6 +147,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "max_concurrency": 1,
             "runtime": runtime,
         }
+
+    @app.get(
+        "/api/v1/artifacts/{job_id}/{sample_id}/second_check/{claim_id}/{file_name}",
+        dependencies=[Depends(require_bearer)],
+    )
+    def download_second_check_artifact(
+        job_id: str, sample_id: str, claim_id: str, file_name: str,
+    ):
+        path = resolve_artifact(
+            app.state.settings.request_root / "artifacts",
+            job_id=job_id, sample_id=sample_id, claim_id=claim_id, file_name=file_name,
+        )
+        if path is None:
+            raise HTTPException(status_code=404, detail={
+                "code": "ARTIFACT_NOT_FOUND", "message": "artifact was not found", "retryable": False,
+            })
+        return FileResponse(path, media_type="image/png", filename=file_name)
 
     @app.post("/api/v1/agent3/verify", dependencies=[Depends(require_bearer)])
     async def verify(request: Request):
@@ -177,6 +197,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 sample_id=parsed.sample_id,
                 payload=package,
             )
+            artifacts = persist_second_check_artifacts(
+                work,
+                app.state.settings.request_root / "artifacts",
+                job_id=parsed.job_id,
+                sample_id=parsed.sample_id,
+            )
             package = public_package(package)
             return {
                 "contract_version": CONTRACT_VERSION,
@@ -184,6 +210,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "job_id": parsed.job_id,
                 "sample_id": parsed.sample_id,
                 "agent_code": "agent3",
+                "display_name": "证据约束核验智能体",
                 "capability": "evidence_verification",
                 "source_version": "Agent3-V5.2.1",
                 "runtime_version": "agent3-v5.2.1-runtime-3.1",
@@ -193,6 +220,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     "raw_output_retained": private_count > 0,
                     "raw_output_exposed": False,
                 },
+                "artifacts": artifacts,
                 "verified_evidence_package": package,
             }
         finally:
@@ -223,6 +251,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "job_id": payload.job_id,
             "sample_id": payload.sample_id,
             "agent_code": "agent4",
+            "display_name": "报告生成智能体",
             "capability": "report_generation",
             "source_version": "Agent4-V3",
             "runtime_version": "agent4-v3",

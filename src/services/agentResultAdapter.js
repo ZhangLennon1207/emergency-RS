@@ -36,8 +36,8 @@ export function normalizeEvidenceVerification(payload) {
   return {
     taskId: payload.task_id ?? checkResult.task_id ?? null,
     capability: 'evidence_verification',
-    sourceAgentId: payload.source_agent_id ?? 'agent4',
-    sourceVersion: payload.source_version ?? 'Agent4-V4',
+    sourceAgentId: payload.source_agent_id ?? 'agent3',
+    sourceVersion: payload.source_version ?? 'Agent3-V5.2.1',
     overallStatus: checkResult.overall_status ?? 'warning',
     claimChecks: (checkResult.claim_checks ?? checkResult.atomic_claims ?? []).map(normalizeClaimCheck),
     groups: {
@@ -70,8 +70,8 @@ export function normalizeGeneratedReport(payload) {
   return {
     taskId: payload.task_id ?? platformReport.task_id ?? null,
     capability: 'report_generation',
-    sourceAgentId: payload.source_agent_id ?? 'agent5',
-    sourceVersion: payload.source_version ?? 'Agent5-V2',
+    sourceAgentId: payload.source_agent_id ?? 'agent4',
+    sourceVersion: payload.source_version ?? 'Agent4-V3',
     overallStatus: platformReport.overall_status ?? 'warning',
     reportType: platformReport.report_type ?? 'remote_sensing_disaster_assessment',
     reportVersion: platformReport.report_version ?? null,

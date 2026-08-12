@@ -33,6 +33,20 @@ def test_health(tmp_path):
     assert body["agent3_loaded"] is False
     assert body["agent3_inference_verified"] is False
     assert "agent3_ready" not in body
+    assert body["agent3_display_name"] == "证据约束核验智能体"
+    assert body["agent4_display_name"] == "报告生成智能体"
+
+
+def test_artifact_download_requires_token_and_returns_png(tmp_path):
+    target = tmp_path / "artifacts" / "J1" / "S1" / "second_check" / "C1"
+    target.mkdir(parents=True)
+    target.joinpath("pre_image_crop.png").write_bytes(png_bytes())
+    c = client(tmp_path)
+    url = "/api/v1/artifacts/J1/S1/second_check/C1/pre_image_crop.png"
+    assert c.get(url).status_code == 401
+    response = c.get(url, headers={"Authorization": "Bearer secret"})
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("image/png")
 
 
 def test_health_distinguishes_configured_loaded_and_verified(tmp_path):

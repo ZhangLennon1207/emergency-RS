@@ -290,18 +290,35 @@ class JobOrchestrator:
         package = sanitized["verified_evidence_package"]
         artifact_path = job_root / "agent3" / "verified_evidence_package.json"
         self._write_json_artifact(artifact_path, package)
+        artifact_records = [{
+            "artifact_type": "verified_evidence_package",
+            "path": artifact_path.relative_to(job_root).as_posix(),
+        }]
+        for remote in sanitized.get("artifacts", []):
+            if not isinstance(remote, dict) or remote.get("artifact_type") != "second_check_crop":
+                continue
+            claim_id = str(remote.get("claim_id") or "")
+            file_name = str(remote.get("file_name") or "")
+            download_url = str(remote.get("download_url") or "")
+            if not claim_id or not file_name or Path(file_name).name != file_name:
+                raise Agent34ServiceError("REMOTE_ARTIFACT_INVALID", "Agent3 artifact metadata is invalid")
+            local = job_root / "agent3" / "second_check" / claim_id / file_name
+            client.download_artifact(download_url=download_url, destination=local)
+            artifact_records.append({
+                "artifact_type": f"second_check_{claim_id}_{Path(file_name).stem}",
+                "path": local.relative_to(job_root).as_posix(),
+                "claim_id": claim_id,
+                "media_type": remote.get("media_type", "image/png"),
+                "sha256": remote.get("sha256"),
+            })
         result = {
             **sanitized,
             "agent_code": "agent3",
             "capability": "evidence_verification",
             "source_version": "Agent3-V5.2.1",
             "status": "succeeded",
-            "artifacts": [
-                {
-                    "artifact_type": "verified_evidence_package",
-                    "path": artifact_path.relative_to(job_root).as_posix(),
-                }
-            ],
+            "display_name": "证据约束核验智能体",
+            "artifacts": artifact_records,
         }
         json.dumps(result, ensure_ascii=False)
         return result, normalized_claims
@@ -348,6 +365,7 @@ class JobOrchestrator:
             "agent_code": "agent4",
             "capability": "report_generation",
             "source_version": "Agent4-V3",
+            "display_name": "报告生成智能体",
             "status": "succeeded",
             "artifacts": [
                 {

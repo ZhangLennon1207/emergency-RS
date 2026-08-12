@@ -481,6 +481,12 @@ def test_orchestrator_runs_remote_agent3_and_agent4_when_configured(
                 "markdown_report_en": "# English disaster report",
             }
 
+        def download_artifact(self, *, download_url, destination):
+            target = Path(destination)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(image_bytes())
+            return target
+
         def close(self):
             self.closed = True
 
