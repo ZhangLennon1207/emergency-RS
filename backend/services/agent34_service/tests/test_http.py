@@ -1,5 +1,6 @@
 import io
 import json
+import os
 
 from fastapi.testclient import TestClient
 from PIL import Image
@@ -8,6 +9,7 @@ from backend.services.agent34_service.main import create_app
 from backend.services.agent34_service.settings import Settings
 from backend.services.agent34_service.request_builder import build_requests
 from backend.services.agent34_service.schemas import VerifyPayload
+from backend.services.agent34_service.settings import Settings
 
 
 def client(tmp_path):
@@ -25,6 +27,53 @@ def test_health(tmp_path):
     response = client(tmp_path).get("/api/v1/health")
     assert response.status_code == 200
     assert response.json()["contract_version"] == "agent34-http-1.0"
+    body = response.json()
+    assert body["agent3_configured"] is True
+    assert body["agent3_loaded"] is False
+    assert body["agent3_inference_verified"] is False
+    assert "agent3_ready" not in body
+
+
+def test_health_distinguishes_configured_loaded_and_verified(tmp_path):
+    base3 = tmp_path / "base3"; adapter3 = tmp_path / "adapter3"
+    base4 = tmp_path / "base4"; adapter4 = tmp_path / "adapter4"
+    for path in (base3, adapter3, base4, adapter4):
+        path.mkdir()
+    settings = Settings("real", "secret", tmp_path / "work",
+                        str(base3), str(adapter3), str(base4), str(adapter4))
+    body = TestClient(create_app(settings)).get("/api/v1/health").json()
+    assert body["status"] == "ok"
+    assert body["agent3_configured"] is True
+    assert body["agent3_loaded"] is False
+    assert body["agent3_inference_verified"] is False
+
+
+def test_health_reports_missing_model_paths_as_degraded(tmp_path):
+    settings = Settings("real", "secret", tmp_path / "work",
+                        str(tmp_path / "missing3"), str(tmp_path / "missing3a"),
+                        str(tmp_path / "missing4"), str(tmp_path / "missing4a"))
+    body = TestClient(create_app(settings)).get("/api/v1/health").json()
+    assert body["status"] == "degraded"
+    assert body["agent3_configured"] is False
+
+
+def test_default_work_root_is_native_absolute(monkeypatch):
+    monkeypatch.delenv("AGENT34_WORK_ROOT", raising=False)
+    monkeypatch.delenv("AGENT34_REQUEST_ROOT", raising=False)
+    settings = Settings.from_env()
+    assert settings.request_root.is_absolute()
+    if os.name == "nt":
+        assert settings.request_root.drive
+
+
+def test_relative_work_root_is_rejected(monkeypatch):
+    monkeypatch.setenv("AGENT34_WORK_ROOT", "relative/agent34")
+    try:
+        Settings.from_env()
+    except RuntimeError as exc:
+        assert "absolute path" in str(exc)
+    else:
+        raise AssertionError("relative AGENT34_WORK_ROOT must be rejected")
 
 
 def test_auth(tmp_path):

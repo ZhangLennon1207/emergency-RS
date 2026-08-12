@@ -105,19 +105,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/api/v1/health")
     def health():
         runtime = app.state.runtime.health()
-        configured = app.state.settings.runtime_mode == "mock" or bool(
-            app.state.settings.agent3_base_model
-            and app.state.settings.agent3_adapter
-            and app.state.settings.agent4_base_model
-            and app.state.settings.agent4_adapter
-        )
+        agent3 = runtime["agents"]["agent3"]
+        agent4 = runtime["agents"]["agent4"]
+        configured = agent3["configured"] and agent4["configured"]
         return {
-            "status": "ok",
+            "status": "ok" if configured else "degraded",
             "service_version": "agent34-service-1.0",
             "contract_version": CONTRACT_VERSION,
             "pipeline_version": PIPELINE_VERSION,
-            "agent3_ready": configured,
-            "agent4_ready": configured,
+            "agent3_version": "Agent3-V5.2.1",
+            "agent4_version": "Agent4-V3",
+            "agent3_configured": agent3["configured"],
+            "agent4_configured": agent4["configured"],
+            "agent3_loaded": agent3["loaded"],
+            "agent4_loaded": agent4["loaded"],
+            "agent3_inference_verified": agent3["inference_verified"],
+            "agent4_inference_verified": agent4["inference_verified"],
             "max_concurrency": 1,
             "runtime": runtime,
         }
@@ -137,6 +140,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 raise _error("SERVICE_BUSY", "Agent34 runtime is busy", True, 503)
             try:
                 package = app.state.runtime.agent3().verify_batch(requests)
+                app.state.runtime.mark_inference_success("agent3")
+            except Exception as exc:
+                app.state.runtime.mark_inference_failure("agent3", exc)
+                raise
             finally:
                 app.state.runtime.lock.release()
             package = enrich_verified_package(
@@ -167,6 +174,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise _error("SERVICE_BUSY", "Agent34 runtime is busy", True, 503)
         try:
             platform_report = app.state.runtime.agent4().generate_report(payload.verified_evidence_package)
+            app.state.runtime.mark_inference_success("agent4")
+        except Exception as exc:
+            app.state.runtime.mark_inference_failure("agent4", exc)
+            raise
         finally:
             app.state.runtime.lock.release()
         schema = Path(__file__).resolve().parents[2] / "agents" / "agent4" / "src" / "platform_report_schema_v3.json"

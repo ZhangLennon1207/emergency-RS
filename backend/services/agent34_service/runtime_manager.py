@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import gc
 import threading
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 
@@ -53,6 +55,27 @@ class RuntimeManager:
         self.active_agent: str | None = None
         self._agent3 = None
         self._agent4 = None
+        self._inference_verified = {"agent3": False, "agent4": False}
+        self._last_success_at = {"agent3": None, "agent4": None}
+        self._last_error = {"agent3": None, "agent4": None}
+
+    def _configured(self, agent: str) -> bool:
+        if self.settings.runtime_mode == "mock":
+            return True
+        paths = (
+            (self.settings.agent3_base_model, self.settings.agent3_adapter)
+            if agent == "agent3"
+            else (self.settings.agent4_base_model, self.settings.agent4_adapter)
+        )
+        return all(value and Path(value).exists() for value in paths)
+
+    def mark_inference_success(self, agent: str) -> None:
+        self._inference_verified[agent] = True
+        self._last_success_at[agent] = datetime.now(timezone.utc).isoformat()
+        self._last_error[agent] = None
+
+    def mark_inference_failure(self, agent: str, exc: Exception) -> None:
+        self._last_error[agent] = type(exc).__name__
 
     def _release(self):
         self._agent3 = None
@@ -94,6 +117,18 @@ class RuntimeManager:
         return self._agent4
 
     def health(self):
-        return {"mode": self.settings.runtime_mode, "active_agent": self.active_agent,
-                "busy": self.lock._is_owned(), "agent3_loaded": self._agent3 is not None,
-                "agent4_loaded": self._agent4 is not None}
+        agents = {}
+        for name, runtime in (("agent3", self._agent3), ("agent4", self._agent4)):
+            agents[name] = {
+                "configured": self._configured(name),
+                "loaded": runtime is not None,
+                "inference_verified": self._inference_verified[name],
+                "last_success_at": self._last_success_at[name],
+                "last_error": self._last_error[name],
+            }
+        return {
+            "mode": self.settings.runtime_mode,
+            "active_agent": self.active_agent,
+            "busy": self.lock._is_owned(),
+            "agents": agents,
+        }
