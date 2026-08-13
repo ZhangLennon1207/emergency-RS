@@ -26,7 +26,10 @@ const artifactLabels = {
   agent2_raw_model_response: 'Agent2 原始模型响应',
   agent2_prompt_snapshot: 'Agent2 Prompt 快照',
   agent2_run_manifest: 'Agent2 运行追踪',
+  second_check_crop: 'Agent3 二次核验局部图',
 }
+
+const agent3SecondCheckPrefix = 'agent3_second_check_crop_'
 
 const imageArtifactTypes = new Set([
   'input_pre', 'pre_image', 'input_post', 'post_image',
@@ -36,12 +39,25 @@ const imageArtifactTypes = new Set([
   'agent1_fused_color', 'fused_color',
   'agent1_fused_overlay', 'fused_overlay',
   'agent1_visual_compare', 'visual_compare',
+  'second_check_crop',
 ])
 
 const textArtifactTypes = new Set(['agent2_raw_model_response', 'agent2_prompt_snapshot'])
 
+function isImageArtifactType(type) {
+  return imageArtifactTypes.has(type) || type.startsWith(agent3SecondCheckPrefix)
+}
+
+function artifactLabel(type) {
+  if (type.startsWith(agent3SecondCheckPrefix)) {
+    const sequence = type.slice(agent3SecondCheckPrefix.length)
+    return `Agent3 二次核验局部图 ${sequence}`
+  }
+  return artifactLabels[type]
+}
+
 function inferFileName(type, url, mimeType = '') {
-  if (mimeType.includes('json') || (!mimeType && !imageArtifactTypes.has(type) && !textArtifactTypes.has(type))) {
+  if (mimeType.includes('json') || (!mimeType && !isImageArtifactType(type) && !textArtifactTypes.has(type))) {
     return `${type}.json`
   }
   if (mimeType.startsWith('text/') || textArtifactTypes.has(type)) return `${type}.txt`
@@ -55,7 +71,7 @@ function normalizeArtifacts(artifacts) {
       .map((artifact, index) => ({
         id: artifact.artifact_id ?? `${artifact.artifact_type}-${index}`,
         type: artifact.artifact_type ?? 'artifact',
-        label: artifact.label ?? artifactLabels[artifact.artifact_type] ?? artifact.file_name ?? '成果文件',
+        label: artifact.label ?? artifactLabel(artifact.artifact_type ?? 'artifact') ?? artifact.file_name ?? '成果文件',
         fileName: artifact.file_name ?? inferFileName(
           artifact.artifact_type ?? 'artifact',
           artifact.preview_url ?? artifact.url ?? '',
@@ -63,7 +79,7 @@ function normalizeArtifacts(artifacts) {
         ),
         mimeType: artifact.mime_type ?? '',
         url: artifact.preview_url ?? artifact.url,
-        isImage: (artifact.mime_type ?? '').startsWith('image/') || imageArtifactTypes.has(artifact.artifact_type),
+        isImage: (artifact.mime_type ?? '').startsWith('image/') || isImageArtifactType(artifact.artifact_type ?? ''),
       }))
       .filter((artifact) => artifact.url)
   }
@@ -73,11 +89,11 @@ function normalizeArtifacts(artifacts) {
     .map(([type, url]) => ({
       id: type,
       type,
-      label: artifactLabels[type] ?? type,
+      label: artifactLabel(type) ?? type,
       fileName: inferFileName(type, url),
       mimeType: '',
       url,
-      isImage: imageArtifactTypes.has(type),
+      isImage: isImageArtifactType(type),
     }))
 }
 

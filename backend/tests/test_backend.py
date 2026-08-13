@@ -6,14 +6,19 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
 from backend.app.artifacts import build_artifact_index
+from backend.app.clients.agent34 import Agent34ServiceError
 from backend.app.config import Settings
 from backend.app.db import JobStore
 from backend.app.main import create_app
-from backend.app.orchestration.orchestrator import JobOrchestrator
+from backend.app.orchestration.orchestrator import (
+    JobOrchestrator,
+    _validated_second_check_artifact,
+)
 
 
 def make_settings(tmp_path: Path) -> Settings:
@@ -498,6 +503,9 @@ def test_orchestrator_runs_remote_agent3_and_agent4_when_configured(
                     "audit_records": [
                         {
                             "raw_first_output": "private model text",
+                            "format_retry": {
+                                "raw_second_check_output": "private retry text"
+                            },
                             "crop_region": {"x_min": 1, "y_min": 2},
                         }
                     ],
@@ -576,13 +584,61 @@ def test_orchestrator_runs_remote_agent3_and_agent4_when_configured(
     assert "agent4_platform_report" in job["result"]["artifacts"]
     assert "agent4_markdown_report_zh" in job["result"]["artifacts"]
     assert fake_client.closed is True
-    assert "private model text" in (
+    controller_log = (
         settings.runtime_root
         / "jobs"
         / "test-job"
         / "logs"
         / "agent3_remote_response.json"
     ).read_text(encoding="utf-8")
+    assert "private model text" not in controller_log
+    assert "private retry text" not in controller_log
+    assert "raw_first_output" not in controller_log
+    assert "raw_second_check_output" not in controller_log
+    assert "crop_region" in controller_log
+
+
+def test_controller_validates_remote_second_check_artifact_metadata(
+    tmp_path: Path,
+) -> None:
+    safe = {
+        "artifact_type": "second_check_crop",
+        "claim_id": "C001",
+        "file_name": "pre_image_crop.png",
+        "download_url": (
+            "/api/v1/artifacts/test-job/sample-001/second_check/"
+            "C001/pre_image_crop.png"
+        ),
+    }
+    download_url, claim_id, file_name, destination = (
+        _validated_second_check_artifact(
+            job_root=tmp_path / "job",
+            job_id="test-job",
+            sample_id="sample-001",
+            artifact=safe,
+        )
+    )
+    assert download_url == safe["download_url"]
+    assert claim_id == "C001"
+    assert file_name == "pre_image_crop.png"
+    assert destination.is_relative_to(
+        (tmp_path / "job" / "agent3" / "second_check").resolve()
+    )
+
+    invalid_artifacts = [
+        {**safe, "claim_id": ".."},
+        {**safe, "file_name": "private_model_log.json"},
+        {**safe, "download_url": "/api/v1/artifacts/other-job/private.png"},
+    ]
+    for artifact in invalid_artifacts:
+        with pytest.raises(Agent34ServiceError) as captured:
+            _validated_second_check_artifact(
+                job_root=tmp_path / "job",
+                job_id="test-job",
+                sample_id="sample-001",
+                artifact=artifact,
+            )
+        assert getattr(captured.value, "code", None) == "REMOTE_ARTIFACT_INVALID"
 
 
 def test_artifact_path_traversal_is_rejected(tmp_path: Path) -> None:

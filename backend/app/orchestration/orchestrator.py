@@ -3,6 +3,7 @@ from __future__ import annotations
 import gc
 import importlib
 import json
+import re
 import sys
 import threading
 import traceback
@@ -51,9 +52,24 @@ PRIVATE_REMOTE_KEYS = {
     "raw_model_output",
     "raw_output",
     "raw_retry_output",
+    "raw_second_check_output",
+    "raw_second_output",
+    "format_retry",
     "second_pass_context",
     "system",
 }
+
+REMOTE_ARTIFACT_IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
+ALLOWED_SECOND_CHECK_FILES = frozenset(
+    {
+        "pre_image_crop.png",
+        "post_image_crop.png",
+        "damage_map_crop.png",
+        "fused_overlay_crop.png",
+        "road_status_map_crop.png",
+        "building_instance_mask_crop.png",
+    }
+)
 
 DEFAULT_AGENT_SOURCE_VERSIONS = {
     "agent3": "Agent3-V5.2.1",
@@ -238,6 +254,60 @@ def _sanitize_remote_value(value: Any) -> Any:
     if isinstance(value, list):
         return [_sanitize_remote_value(item) for item in value]
     return value
+
+
+def _validated_second_check_artifact(
+    *,
+    job_root: Path,
+    job_id: str,
+    sample_id: str,
+    artifact: dict[str, Any],
+) -> tuple[str, str, str, Path]:
+    """Validate remote crop metadata before constructing a controller path."""
+
+    download_url = artifact.get("download_url")
+    claim_id = artifact.get("claim_id")
+    file_name = artifact.get("file_name")
+    values = {
+        "job_id": job_id,
+        "sample_id": sample_id,
+        "claim_id": claim_id,
+        "file_name": file_name,
+    }
+    if any(
+        not isinstance(value, str) or not REMOTE_ARTIFACT_IDENTIFIER.fullmatch(value)
+        for value in values.values()
+    ):
+        raise Agent34ServiceError(
+            "REMOTE_ARTIFACT_INVALID",
+            "Agent3 returned invalid second-check artifact metadata",
+        )
+    if file_name not in ALLOWED_SECOND_CHECK_FILES:
+        raise Agent34ServiceError(
+            "REMOTE_ARTIFACT_INVALID",
+            "Agent3 returned a disallowed second-check artifact file",
+        )
+
+    expected_url = (
+        f"/api/v1/artifacts/{job_id}/{sample_id}/second_check/"
+        f"{claim_id}/{file_name}"
+    )
+    if download_url != expected_url:
+        raise Agent34ServiceError(
+            "REMOTE_ARTIFACT_INVALID",
+            "Agent3 returned a mismatched second-check artifact URL",
+        )
+
+    artifact_root = (job_root / "agent3" / "second_check").resolve()
+    destination = (artifact_root / claim_id / file_name).resolve()
+    try:
+        destination.relative_to(artifact_root)
+    except ValueError as error:
+        raise Agent34ServiceError(
+            "REMOTE_ARTIFACT_INVALID",
+            "Agent3 artifact destination escapes the controller store",
+        ) from error
+    return download_url, claim_id, file_name, destination
 
 
 def _artifact_types(result: dict[str, Any]) -> set[str]:
@@ -425,9 +495,13 @@ class JobOrchestrator:
                 "Agent3 response is missing verified_evidence_package",
             )
 
-        logs_root = job_root / "logs"
-        self._write_json_artifact(logs_root / "agent3_remote_response.json", response)
         sanitized = _sanitize_remote_value(response)
+        # Controller logs are part of the ordinary job runtime. Persist only the
+        # recursively sanitized response; raw model text stays on the model host.
+        logs_root = job_root / "logs"
+        self._write_json_artifact(
+            logs_root / "agent3_remote_response.json", sanitized
+        )
         package = sanitized["verified_evidence_package"]
         artifact_path = job_root / "agent3" / "verified_evidence_package.json"
         self._write_json_artifact(artifact_path, package)
@@ -440,19 +514,25 @@ class JobOrchestrator:
         # Remote crop URLs are private service URLs. Copy every permitted crop
         # into the controller-owned Artifact Store so the public job response
         # never exposes the model host, token, or private runtime directory.
-        for index, remote_artifact in enumerate(response.get("artifacts", []), start=1):
+        crop_index = 0
+        for remote_artifact in response.get("artifacts", []):
             if not isinstance(remote_artifact, dict):
                 continue
-            download_url = remote_artifact.get("download_url")
-            claim_id = str(remote_artifact.get("claim_id") or "")
-            file_name = str(remote_artifact.get("file_name") or "")
-            if not isinstance(download_url, str) or not claim_id or not file_name:
+            if remote_artifact.get("artifact_type") != "second_check_crop":
                 continue
-            destination = job_root / "agent3" / "second_check" / claim_id / file_name
+            download_url, claim_id, file_name, destination = (
+                _validated_second_check_artifact(
+                    job_root=job_root,
+                    job_id=str(job["job_id"]),
+                    sample_id=str(job["sample_id"]),
+                    artifact=remote_artifact,
+                )
+            )
             client.download_artifact(download_url=download_url, destination=destination)
+            crop_index += 1
             local_artifacts.append(
                 {
-                    "artifact_type": f"second_check_crop_{index}",
+                    "artifact_type": f"second_check_crop_{crop_index}",
                     "claim_id": claim_id,
                     "file_name": file_name,
                     "path": destination.relative_to(job_root).as_posix(),
