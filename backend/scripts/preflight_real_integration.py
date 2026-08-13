@@ -1,4 +1,4 @@
-"""Check whether this computer can run the real Agent1 + Agent2 integration."""
+"""检查本机总控后端是否具备真实四智能体联调条件。"""
 
 from __future__ import annotations
 
@@ -9,7 +9,9 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
+import httpx
 from PIL import Image
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -93,7 +95,7 @@ def check_agent1(settings: Settings) -> bool:
         report(
             ready,
             f"Agent1 {key} 权重",
-            path.name if ready and path else f"请设置 {environment}",
+            str(path) if ready and path else f"请配置 {environment}",
         )
         all_ready &= ready
     return all_ready
@@ -102,17 +104,66 @@ def check_agent1(settings: Settings) -> bool:
 def check_agent2(settings: Settings) -> bool:
     base_model = configured_path(settings.agent2_config.get("base_model_path"))
     lora = configured_path(settings.agent2_config.get("lora_path"))
-    checks = {
-        "Agent2 基础模型目录": bool(base_model and base_model.is_dir()),
-        "Agent2 基础模型权重": bool(base_model and list(base_model.glob("*.safetensors"))),
-        "Agent2 LoRA 目录": bool(lora and lora.is_dir()),
-        "Agent2 LoRA 配置": bool(lora and (lora / "adapter_config.json").is_file()),
-        "Agent2 LoRA 权重": bool(lora and (lora / "adapter_model.safetensors").is_file()),
-    }
-    for label, ready in checks.items():
-        environment = "AGENT2_BASE_MODEL_PATH" if "基础模型" in label else "AGENT2_LORA_PATH"
+    checks = (
+        ("Agent2 基础模型目录", bool(base_model and base_model.is_dir()), "AGENT2_BASE_MODEL_PATH"),
+        (
+            "Agent2 基础模型权重",
+            bool(base_model and base_model.is_dir() and list(base_model.glob("*.safetensors"))),
+            "AGENT2_BASE_MODEL_PATH",
+        ),
+        ("Agent2 LoRA 目录", bool(lora and lora.is_dir()), "AGENT2_LORA_PATH"),
+        (
+            "Agent2 LoRA 配置",
+            bool(lora and (lora / "adapter_config.json").is_file()),
+            "AGENT2_LORA_PATH",
+        ),
+        (
+            "Agent2 LoRA 权重",
+            bool(lora and (lora / "adapter_model.safetensors").is_file()),
+            "AGENT2_LORA_PATH",
+        ),
+    )
+    for label, ready, environment in checks:
         report(ready, label, "已找到" if ready else f"请检查 {environment}")
-    return all(checks.values())
+    return all(ready for _, ready, _ in checks)
+
+
+def _agent34_health_detail(payload: dict[str, Any]) -> str:
+    return (
+        f"status={payload.get('status')}, "
+        f"Agent3 configured={payload.get('agent3_configured')}, "
+        f"Agent4 configured={payload.get('agent4_configured')}"
+    )
+
+
+def check_agent34(settings: Settings) -> bool:
+    if not settings.agent34_base_url:
+        report(False, "Agent3/4 远程服务", "请配置 AGENT34_BASE_URL")
+        return False
+    if not settings.agent34_shared_token:
+        report(False, "Agent3/4 共享令牌", "请配置 AGENT34_SHARED_TOKEN")
+        return False
+
+    url = f"{settings.agent34_base_url.rstrip('/')}/api/v1/health"
+    try:
+        response = httpx.get(
+            url,
+            headers={"Authorization": f"Bearer {settings.agent34_shared_token}"},
+            timeout=settings.agent34_connect_timeout_seconds,
+        )
+        response.raise_for_status()
+        payload = response.json()
+    except (httpx.HTTPError, ValueError) as error:
+        report(False, "Agent3/4 远程服务", f"{url} 不可用：{error}")
+        return False
+
+    ready = bool(
+        payload.get("status") == "ok"
+        and payload.get("agent3_configured")
+        and payload.get("agent4_configured")
+    )
+    report(ready, "Agent3/4 远程服务", _agent34_health_detail(payload))
+    return ready
 
 
 def check_images(pre_image: Path, post_image: Path) -> bool:
@@ -122,7 +173,7 @@ def check_images(pre_image: Path, post_image: Path) -> bool:
     try:
         with Image.open(pre_image) as pre, Image.open(post_image) as post:
             same_size = pre.size == post.size
-            detail = f"灾前 {pre.size[0]}×{pre.size[1]}，灾后 {post.size[0]}×{post.size[1]}"
+            detail = f"灾前 {pre.size[0]}x{pre.size[1]}，灾后 {post.size[0]}x{post.size[1]}"
     except OSError as error:
         report(False, "双时相样本", f"图片无法读取：{error}")
         return False
@@ -158,13 +209,14 @@ def main() -> int:
         check_modules(),
         check_agent1(settings),
         check_agent2(settings),
+        check_agent34(settings),
         check_images(args.pre_image.resolve(), args.post_image.resolve()),
     ]
     print()
     if all(checks):
-        print("真实 Agent1 + Agent2 联调预检通过，可以启动 FastAPI。")
+        print("真实 Agent1-4 联调预检通过，可以启动总控 FastAPI 并提交任务。")
         return 0
-    print("真实联调预检未通过；请按 FAIL 项补齐本机模型资产或运行依赖。")
+    print("真实四智能体联调预检未通过；请按 FAIL 项补齐模型、依赖或远程服务配置。")
     return 1
 
 
