@@ -307,6 +307,7 @@ Artifact 是否存在以结果中的 `artifacts` 映射为准，前端不要拼�
 | `agent2_prompt_snapshot` | 本次 Prompt 快照 | 调试/论文复现，不默认展示 |
 | `agent2_run_manifest` | Agent2 运行追踪 | 调试/论文复现 |
 | `agent3_verified_evidence_package` | Agent3 脱敏后的可信证据包 | 核验结果查看/下载 |
+| `agent3_second_check_crop_1`、`agent3_second_check_crop_2` 等 | Agent3 低置信/冲突 Claim 的局部二次核验 PNG | 成果图片区预览/下载；数字后缀由总控按实际返回顺序生成 |
 | `agent4_platform_report` | Agent4 结构化报告 JSON | 报告详情/下载 |
 | `agent4_markdown_report_zh` | 中文 Markdown 报告 | 中文报告查看/下载 |
 | `agent4_markdown_report_en` | 英文 Markdown 报告 | 英文报告查看/下载 |

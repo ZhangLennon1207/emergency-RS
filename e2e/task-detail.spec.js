@@ -46,6 +46,7 @@ test('任务成果文件支持切换、打开和下载', async ({ page }) => {
     task.artifacts = {
       input_pre: dataUrl,
       agent1_fused_overlay: dataUrl,
+      agent3_second_check_crop_1: dataUrl,
     }
     window.localStorage.setItem(key, JSON.stringify(tasks))
   }, { dataUrl: imageDataUrl, taskId: completedTaskId })
@@ -54,6 +55,8 @@ test('任务成果文件支持切换、打开和下载', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '任务成果文件' })).toBeVisible()
   await page.getByRole('button', { name: 'Agent1 融合叠加图' }).click()
   await expect(page.getByRole('img', { name: 'Agent1 融合叠加图' })).toBeVisible()
+  await page.getByRole('button', { name: 'Agent3 二次核验局部图 1' }).click()
+  await expect(page.getByRole('img', { name: 'Agent3 二次核验局部图 1' })).toBeVisible()
   await expect(page.getByRole('link', { name: '打开原图' })).toHaveAttribute('target', '_blank')
   await expect(page.getByRole('link', { name: '下载' })).toHaveAttribute('download')
 })
