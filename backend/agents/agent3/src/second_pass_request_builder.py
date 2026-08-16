@@ -1,4 +1,4 @@
-"""Build an Agent3-V5.2.1 second-pass request after the first check.
+"""Build an Agent3-V5.2 second-pass request after the first check.
 
 The HTTP/service layer may attach a private ``second_pass_context`` to a
 runtime request. The context is never sent to the model. When the first
@@ -14,7 +14,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .second_check_crop_builder import build_crop_bundle
+from .second_check_crop_builder import build_crop_bundle, build_mask_crop_bundle
 
 
 class SecondPassUnavailable(RuntimeError):
@@ -47,6 +47,19 @@ def _first_bbox(first_check: dict[str, Any], context: dict[str, Any]):
     return None, None
 
 
+def _roi_mask(first_check: dict[str, Any], context: dict[str, Any]):
+    """Select the semantic mask associated with road or surface evidence."""
+    evidence_ids = [str(item) for item in first_check.get("evidence_ids", [])]
+    assets = context.get("assets", {})
+    if any(item.startswith("R") for item in evidence_ids):
+        value = assets.get("road_status_map")
+        return ("road", value) if value else (None, None)
+    if any(item.startswith("S") for item in evidence_ids):
+        value = assets.get("surface_change_mask")
+        return ("surface", value) if value else (None, None)
+    return None, None
+
+
 def _full_image_order(policy: dict[str, Any]) -> list[str]:
     recommended = policy.get("recommended_inputs", [])
     mapping = {
@@ -56,6 +69,7 @@ def _full_image_order(policy: dict[str, Any]) -> list[str]:
         "damage_map_crop": "damage_map",
         "fused_overlay_crop": "fused_overlay",
         "road_status_map_crop": "road_status_map",
+        "surface_change_mask_crop": "surface_change_mask",
     }
 
     result: list[str] = []
@@ -76,6 +90,7 @@ def _crop_image_map(bundle: dict[str, Any]) -> dict[str, str]:
         "damage_map_crop": images.get("damage_map"),
         "fused_overlay_crop": images.get("fused_overlay"),
         "road_status_map_crop": images.get("road_status_map"),
+        "surface_change_mask_crop": images.get("surface_change_mask"),
     }
     return {k: v for k, v in result.items() if v}
 
@@ -95,6 +110,7 @@ def build_second_pass_from_context(
 
     inp = _parse_input(request.get("input", {}))
     evidence_id, bbox = _first_bbox(first_check, context)
+    roi_mode, roi_mask = _roi_mask(first_check, context)
 
     image_map: dict[str, str] = {}
     localization: dict[str, Any]
@@ -112,6 +128,24 @@ def build_second_pass_from_context(
             localization = {
                 "mode": "localized_bbox_crop",
                 "evidence_id": evidence_id,
+                "crop_bbox": bundle.get("crop_bbox"),
+            }
+        except (OSError, ValueError, TypeError):
+            image_map = {}
+            localization = {"mode": "full_image_fallback"}
+    elif roi_mode is not None and roi_mask and context.get("work_dir"):
+        try:
+            bundle = build_mask_crop_bundle(
+                evidence_id=evidence_id or f"{roi_mode.upper()}_ROI",
+                mask_path=roi_mask,
+                mode=roi_mode,
+                assets=assets,
+                output_dir=Path(context["work_dir"]) / str(first_check.get("claim_id", "claim")),
+            )
+            image_map = _crop_image_map(bundle)
+            localization = {
+                "mode": f"{roi_mode}_semantic_mask_crop",
+                "evidence_id": evidence_id or f"{roi_mode.upper()}_ROI",
                 "crop_bbox": bundle.get("crop_bbox"),
             }
         except (OSError, ValueError, TypeError):

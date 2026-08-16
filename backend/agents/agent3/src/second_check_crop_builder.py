@@ -1,5 +1,5 @@
 """
-Deterministic visual crop builder for Agent3-V5.2.1 second checks.
+Deterministic visual crop builder for Agent3-V5.2 second checks.
 
 The builder never changes a verification decision. It crops aligned
 visual artifacts using an Agent1 evidence bbox already present in the
@@ -21,7 +21,15 @@ SUPPORTED_ASSETS = (
     "fused_overlay",
     "road_status_map",
     "building_instance_mask",
+    "surface_change_mask",
 )
+
+
+ROI_MODES = {
+    "building": {"padding_ratio": 0.15},
+    "road": {"padding_ratio": 0.08},
+    "surface": {"padding_ratio": 0.12},
+}
 
 
 def normalize_bbox(bbox: Any) -> tuple[int, int, int, int]:
@@ -65,6 +73,54 @@ def padded_bbox(
     if result[2] <= result[0] or result[3] <= result[1]:
         raise ValueError(f"BBox falls outside image bounds: {bbox!r}")
     return result
+
+
+def mask_bbox(mask_path: str | Path, *, mode: str) -> tuple[int, int, int, int]:
+    """Return a local semantic ROI without an instance bbox.
+
+    For road status maps, select the largest connected affected-road segment
+    instead of the union of every road in the scene. This preserves locality
+    when a network crosses the complete image.
+    """
+    with Image.open(mask_path) as img:
+        rgb = img.convert("RGB")
+        width, height = rgb.size
+        pixels = rgb.load()
+        selected_pixels: set[tuple[int, int]] = set()
+        for y in range(height):
+            for x in range(width):
+                r, g, b = pixels[x, y]
+                if mode == "road":
+                    selected = r >= 120 and r > g * 1.2 and r > b * 1.2
+                else:
+                    selected = max(r, g, b) >= 20
+                if selected:
+                    selected_pixels.add((x, y))
+    if not selected_pixels:
+        raise ValueError(f"No {mode} ROI pixels found in {mask_path}")
+    if mode != "road":
+        xs, ys = zip(*selected_pixels)
+        return min(xs), min(ys), max(xs) + 1, max(ys) + 1
+
+    # Eight-neighbour connectivity keeps diagonal road strokes together.
+    largest: set[tuple[int, int]] = set()
+    remaining = set(selected_pixels)
+    while remaining:
+        component = {remaining.pop()}
+        frontier = list(component)
+        while frontier:
+            x, y = frontier.pop()
+            for nx in range(x - 1, x + 2):
+                for ny in range(y - 1, y + 2):
+                    point = (nx, ny)
+                    if point in remaining:
+                        remaining.remove(point)
+                        component.add(point)
+                        frontier.append(point)
+        if len(component) > len(largest):
+            largest = component
+    xs, ys = zip(*largest)
+    return min(xs), min(ys), max(xs) + 1, max(ys) + 1
 
 
 def build_crop_bundle(
@@ -132,3 +188,24 @@ def build_crop_bundle(
         "padding_ratio": float(padding_ratio),
         "images": outputs,
     }
+
+
+def build_mask_crop_bundle(
+    *,
+    evidence_id: str,
+    mask_path: str | Path,
+    mode: str,
+    assets: dict[str, str],
+    output_dir: str | Path,
+) -> dict[str, Any]:
+    """Build an aligned second-check bundle from a semantic ROI mask."""
+    if mode not in ROI_MODES:
+        raise ValueError(f"Unsupported ROI mode: {mode}")
+    original_bbox = mask_bbox(mask_path, mode=mode)
+    return build_crop_bundle(
+        evidence_id=evidence_id,
+        bbox=original_bbox,
+        assets=assets,
+        output_dir=output_dir,
+        padding_ratio=ROI_MODES[mode]["padding_ratio"],
+    )

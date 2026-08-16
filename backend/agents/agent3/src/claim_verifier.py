@@ -12,7 +12,6 @@ from .model_runner import (
 from .postprocess_minimal_check import (
     postprocess_minimal_check,
 )
-from .output_schema import verification_json_schema
 
 from .schemas import (
     Agent3ContractError,
@@ -168,10 +167,6 @@ def _build_contract_request(request):
         + json.dumps(allowed_ids, ensure_ascii=False, separators=(",", ":"))
     ).strip()
     constrained["output_contract_version"] = "agent3-frozen-json-v3.1"
-    constrained["response_json_schema"] = verification_json_schema(
-        scene_uid=identity["scene_uid"], claim_id=identity["claim_id"],
-        claim_type=identity["claim_type"], evidence_ids=allowed_ids,
-    )
     return constrained
 
 
@@ -201,6 +196,21 @@ def _constrain_evidence(check, allowed_ids):
         reason = str(result.get("reason", "")).strip()
         result["reason"] = f"{reason} {suffix}".strip()
     return result
+
+
+def _scope_second_pass_evidence(request, allowed_ids):
+    """Limit the model-visible second-pass ledger to the first-pass evidence."""
+    scoped = copy.deepcopy(request)
+    inp = _request_input(scoped)
+    evidence = inp.get("structured_evidence")
+    if isinstance(evidence, list):
+        inp["structured_evidence"] = [
+            item for item in evidence
+            if isinstance(item, dict)
+            and str(item.get("evidence_id")) in allowed_ids
+        ]
+    scoped["input"] = inp
+    return scoped
 
 
 def _invalid_output_fallback(
@@ -453,7 +463,13 @@ class Agent3Verifier:
             policy["required"]
             and second_pass
         ):
-            contract_second_pass = _build_contract_request(second_pass)
+            # A localized re-check refines the first evidence selection; it
+            # must not switch to an unrelated ledger item merely because all
+            # source IDs remain present in the request payload.
+            crop_allowed_ids = set(first.get("evidence_ids", [])) or allowed_ids
+            contract_second_pass = _build_contract_request(
+                _scope_second_pass_evidence(second_pass, crop_allowed_ids)
+            )
             crop_raw = (
                 self.runner.generate(
                     contract_second_pass
@@ -468,7 +484,7 @@ class Agent3Verifier:
                         "verification"
                     ]
                 )
-                crop_check = _constrain_evidence(crop_check, allowed_ids)
+                crop_check = _constrain_evidence(crop_check, crop_allowed_ids)
 
             except Agent3ContractError:
                 crop_retry_raw = self.runner.generate(
@@ -478,7 +494,7 @@ class Agent3Verifier:
                     crop_check = postprocess_minimal_check(
                         crop_retry_raw
                     )["verification"]
-                    crop_check = _constrain_evidence(crop_check, allowed_ids)
+                    crop_check = _constrain_evidence(crop_check, crop_allowed_ids)
                 except Agent3ContractError:
                     return _invalid_output_fallback(
                         request,
@@ -514,10 +530,6 @@ class Agent3Verifier:
         wrapped[
             "generation_quality"
         ] = {
-            "structured_decoding": True,
-
-            "structured_decoding_schema": "agent3-verification-3.1",
-
             "first_check_strict_json":
                 first_parsed[
                     "strict_json"
@@ -530,15 +542,6 @@ class Agent3Verifier:
 
             "retry_used":
                 raw_retry is not None or crop_retry_raw is not None,
-
-            "format_repair_attempted":
-                raw_retry is not None or crop_retry_raw is not None,
-
-            "semantic_second_check_required":
-                bool(policy["required"]),
-
-            "semantic_second_check_executed":
-                crop_check is not None,
 
             "crop_retry_used":
                 crop_retry_raw is not None,

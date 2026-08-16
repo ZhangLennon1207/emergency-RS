@@ -1,5 +1,11 @@
-CONFLICT_STATUSES = {
+RISK_STATUSES = {
+    "partially_supported",
     "contradicted",
+    "exaggerated",
+}
+
+BOUNDARY_STATUSES = {
+    "partially_supported",
     "exaggerated",
 }
 
@@ -38,6 +44,17 @@ def _recommended_inputs(
             "fused_overlay_crop",
         ]
 
+    if any(
+        x.startswith("S")
+        for x in evidence_ids
+    ):
+        return [
+            "pre_crop",
+            "post_crop",
+            "surface_change_mask_crop",
+            "fused_overlay_crop",
+        ]
+
     return [
         "pre_image",
         "post_image",
@@ -70,14 +87,13 @@ def decide_second_check(
         "support_status"
     )
 
-    if status in CONFLICT_STATUSES:
+    if status in RISK_STATUSES:
         reasons.append(
             f"boundary_status:{status}"
         )
 
-    # partially_supported is not, by itself, a reason to rerun the model.
-    # It triggers only when the model explicitly requests it, evidence IDs
-    # are absent, or calibrated evidence falls in a low/uncertain interval.
+    if status in BOUNDARY_STATUSES:
+        reasons.append("boundary_decision_requires_local_recheck")
 
     evidence_ids = verification.get(
         "evidence_ids",
