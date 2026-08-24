@@ -9,6 +9,11 @@ def build_verified_package(
 
     for item in verification_results:
 
+        human_review_required = bool(
+            item.get("human_review_required")
+            or item.get("resolution_state") == "model_output_invalid"
+        )
+
         audit_records.append(
             item
         )
@@ -35,7 +40,7 @@ def build_verified_package(
                     ),
 
                 "human_review_required":
-                    bool(item.get("human_review_required")),
+                    human_review_required,
 
                 "failure_category":
                     (
@@ -91,10 +96,10 @@ def build_verified_package(
                 item.get("resolution_state"),
 
             "human_review_required":
-                bool(item.get("human_review_required")),
+                human_review_required,
 
             "attention_required":
-                item.get("resolution_state") == "model_output_invalid",
+                human_review_required,
         }
 
         if status == "supported":
@@ -151,7 +156,13 @@ def build_verified_package(
                 len(pending),
 
             "human_review_required":
-                sum(bool(x.get("human_review_required")) for x in audit_records),
+                sum(
+                    bool(
+                        x.get("human_review_required")
+                        or x.get("resolution_state") == "model_output_invalid"
+                    )
+                    for x in audit_records
+                ),
 
             "model_output_invalid":
                 len({

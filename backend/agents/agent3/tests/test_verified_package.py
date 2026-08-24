@@ -56,7 +56,7 @@ class PackageTest(
             1,
         )
 
-    def test_format_failure_is_attention_not_human_review(self):
+    def test_format_failure_requires_human_review(self):
         package = build_verified_package([{
             "scene_uid": "S0001", "claim_id": "C2",
             "resolution_state": "model_output_invalid",
@@ -65,8 +65,8 @@ class PackageTest(
             "final_check": None,
         }])
         self.assertEqual(package["summary"]["model_output_invalid"], 1)
-        self.assertEqual(package["summary"]["human_review_required"], 0)
-        self.assertFalse(package["pending_claims"][0]["human_review_required"])
+        self.assertEqual(package["summary"]["human_review_required"], 1)
+        self.assertTrue(package["pending_claims"][0]["human_review_required"])
 
     def test_invalid_count_is_unique_claim_and_stages_are_separate(self):
         invalid = {
