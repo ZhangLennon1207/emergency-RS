@@ -17,6 +17,8 @@ from .schemas import (
     Agent3ContractError,
 )
 
+from .output_schema import verification_json_schema
+
 from .second_check_policy import (
     decide_second_check,
 )
@@ -167,6 +169,13 @@ def _build_contract_request(request):
         + json.dumps(allowed_ids, ensure_ascii=False, separators=(",", ":"))
     ).strip()
     constrained["output_contract_version"] = "agent3-frozen-json-v3.1"
+    if constrained.get("enable_structured_decoding") is True:
+        constrained["response_json_schema"] = verification_json_schema(
+            scene_uid=identity["scene_uid"],
+            claim_id=identity["claim_id"],
+            claim_type=identity["claim_type"],
+            evidence_ids=allowed_ids,
+        )
     return constrained
 
 
@@ -181,6 +190,15 @@ def _request_input(request):
         except Exception:
             return {}
     return {}
+
+
+def _source_evidence_ids(request):
+    evidence = _request_input(request).get("structured_evidence", [])
+    return sorted({
+        str(item["evidence_id"])
+        for item in evidence
+        if isinstance(item, dict) and item.get("evidence_id") is not None
+    })
 
 
 def _constrain_evidence(check, allowed_ids):
@@ -263,7 +281,7 @@ def _invalid_output_fallback(
             "model_output_invalid",
 
         "human_review_required":
-            False,
+            True,
 
         "audit": {
             "trigger_reasons": [
@@ -278,6 +296,20 @@ def _invalid_output_fallback(
 
             "failure_category":
                 "format_contract",
+
+            "human_review_reasons": [
+                "model_output_invalid"
+            ],
+
+            "source_evidence_ids":
+                _source_evidence_ids(request),
+
+            "first_evidence_ids":
+                sorted(first_check.get("evidence_ids", [])) if first_check else [],
+
+            "second_evidence_ids": [],
+
+            "final_evidence_ids": [],
 
             "crop_region":
                 request.get(
@@ -506,9 +538,12 @@ class Agent3Verifier:
                     )
 
         actual_crop_region = request.get("crop_region")
+        localization_audit = None
         if second_pass:
             second_input = _request_input(second_pass)
             localization = second_input.get("localization", {})
+            if isinstance(localization, dict):
+                localization_audit = localization
             if isinstance(localization, dict) and localization.get("crop_bbox"):
                 actual_crop_region = localization["crop_bbox"]
 
@@ -526,6 +561,22 @@ class Agent3Verifier:
         )
 
         wrapped["audit"]["second_pass_auto_built"] = auto_second_pass
+        wrapped["audit"]["source_evidence_ids"] = sorted(allowed_ids)
+        wrapped["audit"]["first_evidence_ids"] = sorted(first.get("evidence_ids", []))
+        wrapped["audit"]["second_evidence_ids"] = (
+            sorted(crop_check.get("evidence_ids", [])) if crop_check else []
+        )
+        final_check = wrapped.get("final_check")
+        wrapped["audit"]["final_evidence_ids"] = (
+            sorted(final_check.get("evidence_ids", [])) if final_check else []
+        )
+        if localization_audit is not None:
+            wrapped["audit"]["localization_mode"] = localization_audit.get("mode")
+            if localization_audit.get("fallback_reason"):
+                wrapped["audit"]["fallback_reason"] = localization_audit["fallback_reason"]
+        wrapped["audit"]["format_repair_attempted"] = bool(
+            raw_retry is not None or crop_retry_raw is not None
+        )
 
         wrapped[
             "generation_quality"
@@ -548,6 +599,12 @@ class Agent3Verifier:
 
             "parse_failure":
                 False,
+
+            "format_repair_attempted":
+                raw_retry is not None or crop_retry_raw is not None,
+
+            "structured_decoding_requested":
+                request.get("enable_structured_decoding") is True,
         }
 
         # Preserve the first malformed response

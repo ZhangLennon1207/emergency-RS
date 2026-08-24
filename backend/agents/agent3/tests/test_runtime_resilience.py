@@ -170,7 +170,7 @@ class RuntimeResilienceTest(
             REQUEST
         )
 
-        self.assertFalse(
+        self.assertTrue(
             result[
                 "human_review_required"
             ]
@@ -194,6 +194,15 @@ class RuntimeResilienceTest(
             "format_contract",
         )
 
+        self.assertEqual(
+            result["audit"]["human_review_reasons"],
+            ["model_output_invalid"],
+        )
+        self.assertEqual(result["audit"]["source_evidence_ids"], ["B0001"])
+        self.assertEqual(result["audit"]["first_evidence_ids"], [])
+        self.assertEqual(result["audit"]["second_evidence_ids"], [])
+        self.assertEqual(result["audit"]["final_evidence_ids"], [])
+
     def test_contract_is_injected_without_changing_request(self):
         valid = json.dumps(VALID)
         runner = SequenceRunner([valid])
@@ -214,6 +223,14 @@ class RuntimeResilienceTest(
             "agent3-frozen-json-v3.1",
         )
         self.assertIn("Never reproduce the input object", seen[0]["instruction"])
+
+    def test_structured_decoding_is_opt_in(self):
+        from backend.agents.agent3.src.claim_verifier import _build_contract_request
+        base = dict(REQUEST)
+        base["enable_structured_decoding"] = True
+        constrained = _build_contract_request(base)
+        self.assertIn("response_json_schema", constrained)
+        self.assertNotIn("response_json_schema", _build_contract_request(REQUEST))
 
     def test_crop_check_gets_contract_retry(self):
         first = dict(VALID)
@@ -237,6 +254,15 @@ class RuntimeResilienceTest(
         result = verifier.verify(request)
         self.assertEqual(result["resolution_state"], "second_check_agreement")
         self.assertTrue(result["generation_quality"]["crop_retry_used"])
+        self.assertEqual(result["audit"]["source_evidence_ids"], ["B0001"])
+        self.assertEqual(result["audit"]["first_evidence_ids"], ["B0001"])
+        self.assertEqual(result["audit"]["second_evidence_ids"], ["B0001"])
+        self.assertEqual(result["audit"]["final_evidence_ids"], ["B0001"])
+        self.assertTrue(result["human_review_required"])
+        self.assertIn(
+            "high_risk_status:partially_supported",
+            result["audit"]["human_review_reasons"],
+        )
 
 
 if __name__ == "__main__":

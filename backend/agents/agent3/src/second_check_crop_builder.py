@@ -56,6 +56,8 @@ def padded_bbox(
     width: int,
     height: int,
     padding_ratio: float = 0.15,
+    min_width: int = 64,
+    min_height: int = 64,
 ) -> tuple[int, int, int, int]:
     x1, y1, x2, y2 = bbox
     bw = max(1, x2 - x1)
@@ -63,12 +65,21 @@ def padded_bbox(
     px = round(bw * padding_ratio)
     py = round(bh * padding_ratio)
 
-    result = (
+    result = [
         max(0, x1 - px),
         max(0, y1 - py),
         min(width, x2 + px),
         min(height, y2 + py),
-    )
+    ]
+    target_w = min(width, max(min_width, result[2] - result[0]))
+    target_h = min(height, max(min_height, result[3] - result[1]))
+    cx = (x1 + x2) / 2
+    cy = (y1 + y2) / 2
+    result[0] = max(0, min(width - target_w, round(cx - target_w / 2)))
+    result[1] = max(0, min(height - target_h, round(cy - target_h / 2)))
+    result[2] = result[0] + target_w
+    result[3] = result[1] + target_h
+    result = tuple(int(value) for value in result)
 
     if result[2] <= result[0] or result[3] <= result[1]:
         raise ValueError(f"BBox falls outside image bounds: {bbox!r}")

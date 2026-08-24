@@ -51,13 +51,15 @@ def _roi_mask(first_check: dict[str, Any], context: dict[str, Any]):
     """Select the semantic mask associated with road or surface evidence."""
     evidence_ids = [str(item) for item in first_check.get("evidence_ids", [])]
     assets = context.get("assets", {})
-    if any(item.startswith("R") for item in evidence_ids):
+    road_ids = [item for item in evidence_ids if item.startswith("R")]
+    if road_ids:
         value = assets.get("road_status_map")
-        return ("road", value) if value else (None, None)
-    if any(item.startswith("S") for item in evidence_ids):
+        return ("road", value, road_ids[0]) if value else (None, None, None)
+    surface_ids = [item for item in evidence_ids if item.startswith("S")]
+    if surface_ids:
         value = assets.get("surface_change_mask")
-        return ("surface", value) if value else (None, None)
-    return None, None
+        return ("surface", value, surface_ids[0]) if value else (None, None, None)
+    return None, None, None
 
 
 def _full_image_order(policy: dict[str, Any]) -> list[str]:
@@ -110,7 +112,7 @@ def build_second_pass_from_context(
 
     inp = _parse_input(request.get("input", {}))
     evidence_id, bbox = _first_bbox(first_check, context)
-    roi_mode, roi_mask = _roi_mask(first_check, context)
+    roi_mode, roi_mask, roi_evidence_id = _roi_mask(first_check, context)
 
     image_map: dict[str, str] = {}
     localization: dict[str, Any]
@@ -132,11 +134,14 @@ def build_second_pass_from_context(
             }
         except (OSError, ValueError, TypeError):
             image_map = {}
-            localization = {"mode": "full_image_fallback"}
+            localization = {
+                "mode": "full_image_fallback",
+                "fallback_reason": "invalid_or_misaligned_bbox_assets",
+            }
     elif roi_mode is not None and roi_mask and context.get("work_dir"):
         try:
             bundle = build_mask_crop_bundle(
-                evidence_id=evidence_id or f"{roi_mode.upper()}_ROI",
+                evidence_id=roi_evidence_id or evidence_id or f"{roi_mode.upper()}_ROI",
                 mask_path=roi_mask,
                 mode=roi_mode,
                 assets=assets,
@@ -145,14 +150,24 @@ def build_second_pass_from_context(
             image_map = _crop_image_map(bundle)
             localization = {
                 "mode": f"{roi_mode}_semantic_mask_crop",
-                "evidence_id": evidence_id or f"{roi_mode.upper()}_ROI",
+                "evidence_id": roi_evidence_id or evidence_id or f"{roi_mode.upper()}_ROI",
                 "crop_bbox": bundle.get("crop_bbox"),
             }
         except (OSError, ValueError, TypeError):
             image_map = {}
-            localization = {"mode": "full_image_fallback"}
+            localization = {
+                "mode": "full_image_fallback",
+                "fallback_reason": (
+                    f"missing_or_empty_{roi_mode}_semantic_mask"
+                    if roi_mode
+                    else "no_reliable_evidence_bbox_or_semantic_mask"
+                ),
+            }
     else:
-        localization = {"mode": "full_image_fallback"}
+        localization = {
+            "mode": "full_image_fallback",
+            "fallback_reason": "no_reliable_evidence_bbox_or_semantic_mask",
+        }
 
     if image_map:
         desired_order = [
